@@ -270,7 +270,9 @@ export function StaffSidebar({ isSidebarOpen, setSidebarOpen, isCollapsed, setIs
           isCollapsed ? "w-20" : "w-64"
         )}>
           <div className='flex flex-col h-full'>
-            <SidebarStructure isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
+            <SidebarStructure isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} setSidebarOpen={function (open: boolean): void {
+            throw new Error('Function not implemented.');
+          } } />
             <SidebarFooter isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
           </div>
       </aside>

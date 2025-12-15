@@ -1,3 +1,4 @@
+'use client'
 import { cn } from "@/lib/utils";
 
 interface Tab {
@@ -11,17 +12,19 @@ interface NavigationTabsProps {
   onTabChange: (tabId: string) => void;
 }
 
+
+
 export function NavigationTabs({ tabs, activeTab, onTabChange }: NavigationTabsProps) {
   return (
-    <nav className="dashboard-card p-2">
-      <div className="flex items-center gap-1 overflow-x-auto">
+    <nav className="bg-card rounded-2xl p-2 transition-shadow duration-200 shadow-sm hover:shadow-md">
+      <div className="flex overflow-x-auto w-full gap-2 mobile-scrollbar pb-1">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
             className={cn(
-              "nav-tab rounded-lg whitespace-nowrap",
-              activeTab === tab.id && "nav-tab-active bg-accent"
+              "px-4 py-2 text-lg font-medium text-muted-foreground transition-colors hover:text-foreground rounded-lg whitespace-nowrap flex-shrink-0",
+              activeTab === tab.id && "text-primary border-b-2 border-primary bg-accent"
             )}
           >
             {tab.label}

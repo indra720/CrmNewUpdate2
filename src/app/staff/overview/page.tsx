@@ -1,67 +1,17 @@
 import { TrendingUp, Clock, Calendar, Target } from "lucide-react";
 import React from 'react'; // Added React import for JSX
 import  DashboardLayout  from "./dashboardlayout/page";
+import { GreetingCard } from "./GreetingCard/GreetingCard";
+import { WorkScheduleCard } from "./workschedulecard/page";
+import { ReportingToCard } from "./reportingtocard/page";
+import { DepartmentMembersCard } from "./departmentmemberscard/page";
+import { UpcomingHolidaysCard } from "./upcomingholiday/page";
 
-// // Placeholder for DashboardLayout
-// const DashboardLayout = ({ children }: { children: React.ReactNode }) => (
-//   <div className="p-6 md:p-8 space-y-6">{children}</div>
-// );
 
-// Placeholder for GreetingCard
-const GreetingCard = ({ name, companyName }: { name: string; companyName: string }) => (
-  <div className="dashboard-card p-6 border rounded-lg shadow-sm">
-    <h2 className="text-2xl font-bold">Hello, {name}!</h2>
-    <p className="text-muted-foreground">Welcome to {companyName}</p>
-  </div>
-);
 
-// Placeholder for WorkScheduleCard
-const WorkScheduleCard = ({ weekRange, shiftType, days }: { weekRange: string; shiftType: string; days: any[] }) => (
-  <div className="dashboard-card p-6 border rounded-lg shadow-sm">
-    <h3 className="text-xl font-semibold">Work Schedule ({weekRange})</h3>
-    <p className="text-muted-foreground">{shiftType}</p>
-    <div className="mt-4 flex gap-2">
-      {days.map((day, index) => (
-        <span key={index} className="px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs">
-          {day.day}
-        </span>
-      ))}
-    </div>
-  </div>
-);
 
-// Placeholder for ReportingToCard
-const ReportingToCard = ({ managerName, managerTitle, status }: { managerName: string; managerTitle: string; status: string }) => (
-  <div className="dashboard-card p-6 border rounded-lg shadow-sm">
-    <h3 className="text-xl font-semibold">Reporting To</h3>
-    <p className="text-muted-foreground">{managerName} ({managerTitle})</p>
-    <p className="text-sm mt-2">Status: {status}</p>
-  </div>
-);
 
-// Placeholder for DepartmentMembersCard
-const DepartmentMembersCard = ({ members, departmentName }: { members: any[]; departmentName: string }) => (
-  <div className="dashboard-card p-6 border rounded-lg shadow-sm">
-    <h3 className="text-xl font-semibold">{departmentName} Members</h3>
-    <ul className="mt-4 space-y-2">
-      {members.map((member) => (
-        <li key={member.id}>{member.name}</li>
-      ))}
-    </ul>
-  </div>
-);
 
-// Placeholder for UpcomingHolidaysCard
-const UpcomingHolidaysCard = ({ holidays }: { holidays: any[] }) => (
-  <div className="dashboard-card p-6 border rounded-lg shadow-sm">
-    <h3 className="text-xl font-semibold">Upcoming Holidays</h3>
-    <ul className="mt-4 space-y-2">
-      {holidays.map((holiday) => (
-        <li key={holiday.id}>{holiday.name} ({holiday.date})</li>
-      ))}
-    </ul>
-  </div>
-);
 
 
 const workDays = [
@@ -97,11 +47,11 @@ export default function Overview() {
   return (
     <DashboardLayout>
         {/* Quick Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {stats.map((stat, index) => (
           <div
             key={stat.label}
-            className="dashboard-card flex items-center gap-4 animate-fade-in"
+            className="dashboard-card flex items-center gap-4 animate-fade-in bg-white rounded-md shadow-sm p-6"
             style={{ animationDelay: `${index * 0.05}s` }}
           >
             <div className={`h-12 w-12 rounded-xl bg-muted flex items-center justify-center ${stat.color}`}>
@@ -117,24 +67,18 @@ export default function Overview() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <GreetingCard name="Ajit Singh" companyName="TechCorp Solutions" />
-          <WorkScheduleCard
-            weekRange="08–14 Dec 2025"
-            shiftType="Flexi Shift – 24hrs"
-            days={workDays}
-          />
+          <GreetingCard name={""}/>
+          
+
+          <WorkScheduleCard weekRange="08-14 Dec 2025" shiftType="Flexi Shift -24hrs" days={workDays}/>
         </div>
         <div className="space-y-6">
-          <ReportingToCard
-            managerName="Rajesh Gupta"
-            managerTitle="Engineering Manager"
-            status="yet-to-check-in"
-          />
-          <DepartmentMembersCard
-            members={departmentMembers}
-            departmentName="Engineering"
-          />
-          <UpcomingHolidaysCard holidays={upcomingHolidays} />
+          
+          <ReportingToCard managerName={"Rajesh Gupta"} managerTitle={"Engineering Manager"} status={"yet-to-check-in"}/>
+         
+          
+          <DepartmentMembersCard members={departmentMembers} departmentName={"Engineering"}/> 
+          <UpcomingHolidaysCard holidays={upcomingHolidays}/>
         </div>
       </div>
     </DashboardLayout>
