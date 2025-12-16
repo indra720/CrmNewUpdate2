@@ -1,9 +1,10 @@
 'use client';
 
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { EmployeeCard } from "@/app/staff/overview/EmployeeCard/EmployeeCard";
 import { NavigationTabs } from "@/app/staff/overview/Navigation/NavigationTabs";
+import { useToast } from "@/hooks/use-toast";
 
 const tabs = [
   { id: "overview", label: "Overview", path: "/staff/overview" },
@@ -17,6 +18,15 @@ const tabs = [
   
 ];
 
+interface ProfileData {
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  staff_id: string;
+}
+
 interface DashboardLayoutProps {
   children: ReactNode;
 }
@@ -24,13 +34,53 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { toast } = useToast();
+
+  const [staffName, setStaffName] = useState("Staff Member");
+  const [staffLocation, setStaffLocation] = useState("N/A");
+  const [staffId, setStaffId] = useState("N/A");
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          throw new Error('Authentication token not found.');
+        }
+
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/api/staff/profile/`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Token ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data: ProfileData = await response.json();
+        setStaffName(data.name || "Staff Member");
+        setStaffLocation(`${data.address}, ${data.city}, ${data.state} ${data.pincode}` || "N/A");
+        setStaffId(data.staff_id || "N/A");
+      } catch (err: any) {
+        toast({
+          title: "Error",
+          description: "Failed to load staff profile for dashboard.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchProfile();
+  }, []);
 
   const activeTab =
     [...tabs].sort((a, b) => b.path.length - a.path.length).find(tab => pathname.startsWith(tab.path))?.id || "overview";
-
-  const checkInTime = new Date();
-  checkInTime.setHours(checkInTime.getHours() - 6);
-  checkInTime.setMinutes(checkInTime.getMinutes() - 43);
 
   const handleTabChange = (tabId: string) => {
     const tab = tabs.find(t => t.id === tabId);
@@ -38,16 +88,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="min-h-screen ">
+      <div className="max-w-7xl mx-auto space-y-6">
 
         <EmployeeCard
-          employeeId="VL12438"
-          name="Ajit Singh"
+          employeeId={staffId}
+          name={staffName}
           jobTitle="Technical Lead"
-          isCheckedIn={true}
-          checkInTime={checkInTime}
-          checkInLocation="TechCorp Solutions, Sector 62, Noida, UP 201301"
+          initialIsCheckedIn={false}
+          checkInLocation={staffLocation}
         />
 
         
@@ -63,10 +112,3 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     </div>
   );
 }
-
-
-
-
-
-
-

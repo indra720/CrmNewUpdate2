@@ -79,7 +79,7 @@ export default function Leave() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 bg-card shadow-sm rounded-lg p-6">
+      <div className="space-y-6 bg-card shadow-md rounded-lg p-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Leave Management</h1>
@@ -92,14 +92,14 @@ export default function Leave() {
         </div>
 
         {/* Leave Balance Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 ">
           {leaveBalance.map((leave, index) => {
             const IconComponent = leave.icon;
             
             return (
               <div 
                 key={leave.type} 
-                className="dashboard-card animate-fade-in"
+                className="dashboard-card bg-card shadow-md rounded-md p-6 animate-fade-in"
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
                 <div className="flex items-center gap-3 mb-4">

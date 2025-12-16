@@ -436,7 +436,13 @@ export default function ProfilePage() {
         <div className="bg-muted/30 p-8 flex flex-col md:flex-row items-center gap-6">
           <Avatar className="h-24 w-24 border-4 border-background shadow-md">
             <AvatarImage src={profileImage} data-ai-hint={userAvatar?.imageHint} />
-            <AvatarFallback>S</AvatarFallback>
+            <AvatarFallback>
+              {fullName
+                .split(" ")
+                .map((n) => n[0])
+                .join("")
+                .toUpperCase()}
+            </AvatarFallback>
           </Avatar>
           <div className="text-center md:text-left">
             <h2 className="text-2xl font-bold">{fullName}</h2>

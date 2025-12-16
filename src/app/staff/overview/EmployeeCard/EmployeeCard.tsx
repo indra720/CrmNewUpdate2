@@ -4,14 +4,19 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Clock, LogOut, MapPin } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface EmployeeCardProps {
   employeeId: string;
   name: string;
   jobTitle: string;
   avatarUrl?: string;
-  isCheckedIn: boolean;
-  checkInTime?: Date;
+  initialIsCheckedIn: boolean;
+  initialCheckInTime?: Date;
   checkInLocation?: string;
 }
 
@@ -20,18 +25,148 @@ export function EmployeeCard({
   name,
   jobTitle,
   avatarUrl,
-  isCheckedIn,
-  checkInTime,
+  initialIsCheckedIn,
+  initialCheckInTime,
   checkInLocation,
 }: EmployeeCardProps) {
+  const { toast } = useToast();
+  const [isCheckedIn, setIsCheckedIn] = useState(initialIsCheckedIn);
+  const [checkInTime, setCheckInTime] = useState<Date | undefined>(initialCheckInTime);
+  const [checkOutTime, setCheckOutTime] = useState<Date | null>(null);
+  const [isCheckoutModalOpen, setCheckoutModalOpen] = useState(false);
+  const [checkoutFormData, setCheckoutFormData] = useState({
+    projectName: "",
+    workDescription: "",
+    taskTime: "",
+    workProgress: "",
+  });
   const [elapsedTime, setElapsedTime] = useState("00:00:00");
+
+  const handleCheckIn = async () => {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      toast({ title: "Error", description: "Authentication token not found.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/accounts/checkin/`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Token ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      });
+
+      if (response.ok) {
+        const now = new Date();
+        setIsCheckedIn(true);
+        setCheckInTime(now);
+        toast({
+          title: "Checked In",
+          description: "checkin successful",
+          className: 'bg-green-500 text-white'
+        });
+      } else {
+        const errorData = await response.json();
+        toast({
+          title: "Check In Failed",
+          description: errorData.detail || "Failed to check in.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error during check-in:", error);
+      toast({
+        title: "Error",
+        description: "An error occurred during check-in. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCheckOut = () => {
+    if (!checkInTime) {
+      toast({
+        title: "Error",
+        description: "You must check in before you can check out.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setCheckoutModalOpen(true);
+  };
+  
+  const handleCheckoutFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setCheckoutFormData({ ...checkoutFormData, [name]: value });
+  };
+
+  const handleCheckoutSubmit = async () => {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      toast({ title: "Error", description: "Authentication token not found.", variant: "destructive" });
+      return;
+    }
+
+    const now = new Date();
+    const data = new FormData();
+    data.append('project', checkoutFormData.projectName);
+    data.append('work', checkoutFormData.workDescription);
+    data.append('time_taken', checkoutFormData.taskTime);
+    data.append('progress', checkoutFormData.workProgress);
+
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/accounts/checkout/`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Token ${token}`,
+        },
+        body: data,
+      });
+
+      if (response.ok) {
+        setCheckOutTime(now);
+        setIsCheckedIn(false);
+        toast({
+          title: "Checked Out!",
+          description: "Your work has been logged successfully.",
+          className: 'bg-green-500 text-white'
+        });
+        
+        setCheckoutModalOpen(false);
+        setCheckoutFormData({
+          projectName: "",
+          workDescription: "",
+          taskTime: "",
+          workProgress: "",
+        });
+
+      } else {
+        const errorData = await response.json();
+        toast({
+          title: "Check Out Failed",
+          description: errorData.detail || "Failed to log your work.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error during check-out:", error);
+      toast({
+        title: "Error",
+        description: "An error occurred during check-out. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     if (!isCheckedIn || !checkInTime) return;
 
     const updateTimer = () => {
       const now = new Date();
-      const diff = now.getTime() - checkInTime.getTime();
+      const diff = now.getTime() - (checkInTime as Date).getTime();
       const hours = Math.floor(diff / (1000 * 60 * 60));
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
@@ -103,7 +238,7 @@ export function EmployeeCard({
               <span className="text-sm text-muted-foreground flex items-center gap-1">
                 <Clock className="h-4 w-4" />
                 Since{" "}
-                {checkInTime.toLocaleTimeString([], {
+                {(checkInTime as Date).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
                 })}
@@ -132,16 +267,91 @@ export function EmployeeCard({
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="destructive" size="lg" className="shadow-lg">
-              <LogOut className="mr-2 h-4 w-4" />
-              Check-Out
-            </Button>
+            {!isCheckedIn ? (
+              <Button onClick={handleCheckIn} size="lg" className="bg-green-500 text-white hover:bg-green-600 shadow-lg">
+                Check-In
+              </Button>
+            ) : (
+              <Button onClick={handleCheckOut} variant="destructive" size="lg" className="shadow-lg">
+                <LogOut className="mr-2 h-4 w-4" />
+                Check-Out
+              </Button>
+            )}
             <Button variant="outline" size="icon" className="shadow-md">
               <Clock className="h-5 w-5" />
             </Button>
           </div>
         </div>
       </div>
+      <Dialog open={isCheckoutModalOpen} onOpenChange={setCheckoutModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Log Your Work & Check Out</DialogTitle>
+            <DialogDescription>
+              Fill out the details of your work session before checking out.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="projectName" className="text-right">
+                Project
+              </Label>
+              <Input
+                id="projectName"
+                name="projectName"
+                value={checkoutFormData.projectName}
+                onChange={handleCheckoutFormChange}
+                className="col-span-3"
+                placeholder="Enter project name"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="workDescription" className="text-right">
+                Work
+              </Label>
+              <Textarea
+                id="workDescription"
+                name="workDescription"
+                value={checkoutFormData.workDescription}
+                onChange={handleCheckoutFormChange}
+                className="col-span-3"
+                placeholder="Describe what you did."
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="taskTime" className="text-right">
+                Time Taken
+              </Label>
+              <Input
+                id="taskTime"
+                name="taskTime"
+                value={checkoutFormData.taskTime}
+                onChange={handleCheckoutFormChange}
+                className="col-span-3"
+                placeholder="e.g., 2 hours"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="workProgress" className="text-right">
+                Progress
+              </Label>
+              <Textarea
+                id="workProgress"
+                name="workProgress"
+                value={checkoutFormData.workProgress}
+                onChange={handleCheckoutFormChange}
+                className="col-span-3"
+                placeholder="Describe the progress made."
+              />
+            </div>
+
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCheckoutModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleCheckoutSubmit} className="bg-red-500 text-white hover:bg-red-600">Check Out</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

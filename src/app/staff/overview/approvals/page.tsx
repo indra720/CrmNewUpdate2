@@ -81,7 +81,7 @@ export default function Approvals() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 bg-card shadow-sm rounded-md p-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Approvals</h1>
           <p className="text-muted-foreground">Manage pending requests and track your applications</p>
@@ -127,7 +127,7 @@ export default function Approvals() {
                     <Button variant="outline" size="sm" className="text-destructive border-destructive/30 hover:bg-destructive/10">
                       <X className="h-4 w-4" />
                     </Button>
-                    <Button outline="success" size="sm">
+                    <Button variant="outline" size="sm" className="text-green-600 border-green-600/30 hover:bg-green-600/10">
                       <Check className="h-4 w-4" />
                     </Button>
                   </div>
