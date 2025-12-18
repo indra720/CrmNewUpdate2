@@ -17,7 +17,7 @@ export default function StaffLayout({
     <MarketingProvider>
       <div className="flex min-h-screen w-full bg-background text-foreground">
         <StaffSidebar isSidebarOpen={isSidebarOpen} setSidebarOpen={setSidebarOpen} isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
-        <div className={`flex flex-col flex-1 transition-all duration-300 ease-in-out ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
+        <div className={`flex flex-col flex-1 transition-all duration-300 ease-in-out ${isCollapsed ? 'lg:ml-18' : 'lg:ml-60'}`}>
           <Header setSidebarOpen={setSidebarOpen} />
           <main className="flex-1 p-4 sm:px-6 sm:py-0 md:p-8">
               {children}

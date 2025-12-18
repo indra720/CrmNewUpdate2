@@ -69,11 +69,11 @@ export default function Approvals() {
   const getStatusBadge = (status) => {
     switch (status) {
       case "pending":
-        return <span className="status-badge status-badge-pending"><Clock className="h-3 w-3 mr-1" /> Pending</span>;
+        return <span className="bg-amber-100 text-amber-800 rounded-full px-2 py-1 text-xs font-medium inline-flex items-center gap-1"><Clock className="h-3 w-3 mr-1" /> Pending</span>;
       case "approved":
-        return <span className="status-badge status-badge-present"><Check className="h-3 w-3 mr-1" /> Approved</span>;
+        return <span className="bg-green-100 text-green-800 rounded-full px-2 py-1 text-xs font-medium inline-flex items-center gap-1"><Check className="h-3 w-3 mr-1" /> Approved</span>;
       case "rejected":
-        return <span className="status-badge status-badge-absent"><X className="h-3 w-3 mr-1" /> Rejected</span>;
+        return <span className="bg-red-100 text-red-800 rounded-full px-2 py-1 text-xs font-medium inline-flex items-center gap-1"><X className="h-3 w-3 mr-1" /> Rejected</span>;
       default:
         return null;
     }
@@ -101,8 +101,8 @@ export default function Approvals() {
 
           <div className="space-y-4">
             {pendingApprovals.map((request, index) => (
-              <div 
-                key={request.id} 
+              <div
+                key={request.id}
                 className="p-4 rounded-xl border border-border hover:bg-muted/30 transition-colors animate-fade-in"
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
@@ -146,8 +146,8 @@ export default function Approvals() {
 
           <div className="space-y-3">
             {myRequests.map((request, index) => (
-              <div 
-                key={request.id} 
+              <div
+                key={request.id}
                 className="flex items-center justify-between p-4 rounded-xl bg-muted/30 animate-fade-in"
                 style={{ animationDelay: `${index * 0.05}s` }}
               >
@@ -160,8 +160,10 @@ export default function Approvals() {
                     <p className="text-sm text-muted-foreground">{request.details}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  {getStatusBadge(request.status)}
+                <div className="flex flex-col items-end">
+                  <div className="flex items-center">
+                    {getStatusBadge(request.status)}
+                  </div>
                   <p className="text-xs text-muted-foreground mt-1">by {request.approvedBy}</p>
                 </div>
               </div>

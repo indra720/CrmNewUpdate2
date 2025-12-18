@@ -352,8 +352,8 @@ const LoginContent = () => {
             userRole = 'freelancer';
           }
 
-          console.log('Login API response data:', data.data); // Added for debugging
-          console.log('Determined userRole:', userRole); // Added for debugging
+          // console.log('Login API response data:', data.data); // Added for debugging
+          // console.log('Determined userRole:', userRole); // Added for debugging
 
           // Set localStorage for client-side usage
           localStorage.setItem('authToken', token);

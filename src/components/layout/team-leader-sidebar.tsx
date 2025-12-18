@@ -19,9 +19,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 import { Button } from '../ui/button';
 import { useToast } from "@/hooks/use-toast"; // Added import
 import Cookies from 'js-cookie'; // Added missing import
+import { useState, useEffect } from 'react';
 
 
-const NavItem = ({ item, isCollapsed, setSidebarOpen }: { item: any; isCollapsed: boolean; setSidebarOpen: (open: boolean) => void }) => {
+const NavItem = ({ item, isCollapsed, setSidebarOpen, LinkComponent }: { item: any; isCollapsed: boolean; setSidebarOpen: (open: boolean) => void, LinkComponent: React.ComponentType<any> }) => {
   const pathname = usePathname();
   
   const isActive = item.path === pathname || (item.submenu && item.subMenuItems.some((sub:any) => sub.path === pathname));
@@ -55,15 +56,15 @@ const NavItem = ({ item, isCollapsed, setSidebarOpen }: { item: any; isCollapsed
                   <DropdownMenuContent side="right" align="start" className="ml-2 bg-popover border-border text-popover-foreground">
                     {item.subMenuItems.map((subItem: any) => (
                       <DropdownMenuItem key={subItem.title} asChild>
-                        <Link href={subItem.path} className={cn(pathname === subItem.path && 'bg-accent')} onClick={handleClick}>
+                        <LinkComponent href={subItem.path} className={cn(pathname === subItem.path && 'bg-accent')} onClick={handleClick}>
                           {subItem.title}
-                        </Link>
+                        </LinkComponent>
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
             ) : (
-              <Link
+              <LinkComponent
                 href={item.path}
                 className={cn(
                   'flex items-center justify-center w-full h-12 p-3 text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors duration-200 rounded-lg',
@@ -73,7 +74,7 @@ const NavItem = ({ item, isCollapsed, setSidebarOpen }: { item: any; isCollapsed
               >
                 {item.icon}
                  <span className="sr-only">{item.title}</span>
-              </Link>
+              </LinkComponent>
             )}
             
           </TooltipTrigger>
@@ -109,7 +110,7 @@ const NavItem = ({ item, isCollapsed, setSidebarOpen }: { item: any; isCollapsed
           <ul className="space-y-1">
             {item.subMenuItems.map((subItem: any) => (
               <li key={subItem.title}>
-                <Link
+                <LinkComponent
                   href={subItem.path}
                   className={cn(
                     'block p-2 text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors duration-200 rounded-md',
@@ -118,7 +119,7 @@ const NavItem = ({ item, isCollapsed, setSidebarOpen }: { item: any; isCollapsed
                   onClick={handleClick}
                 >
                   {subItem.title}
-                </Link>
+                </LinkComponent>
               </li>
             ))}
           </ul>
@@ -129,7 +130,7 @@ const NavItem = ({ item, isCollapsed, setSidebarOpen }: { item: any; isCollapsed
 
   return (
     <li>
-      <Link
+      <LinkComponent
         href={item.path}
         className={cn(
           'flex items-center p-3 text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors duration-200 rounded-lg',
@@ -139,7 +140,7 @@ const NavItem = ({ item, isCollapsed, setSidebarOpen }: { item: any; isCollapsed
       >
         {item.icon}
         <span className="ml-4">{item.title}</span>
-      </Link>
+      </LinkComponent>
     </li>
   );
 };
@@ -155,7 +156,7 @@ const SidebarContent = ({ isCollapsed, setSidebarOpen }: { isCollapsed: boolean,
   return (
     <ul className="space-y-2">
       {TEAM_LEADER_SIDENAV_ITEMS.map((item) => (
-          <NavItem key={item.title} item={item} isCollapsed={isCollapsed} setSidebarOpen={setSidebarOpen} />
+          <NavItem key={item.title} item={item} isCollapsed={isCollapsed} setSidebarOpen={setSidebarOpen} LinkComponent={Link}/>
       ))}
     </ul>
   );
@@ -169,7 +170,18 @@ export function TeamLeaderSidebar({ isSidebarOpen, setSidebarOpen, isCollapsed, 
   setIsCollapsed: (collapsed: boolean) => void 
 }) {
   const router = useRouter();
-  const { toast } = useToast(); // Initialize useToast
+  const { toast } = useToast();
+  const [userName, setUserName] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedUserName = localStorage.getItem('userName');
+      const storedUserEmail = localStorage.getItem('userEmail');
+      setUserName(storedUserName);
+      setUserEmail(storedUserEmail);
+    }
+  }, []);
 
   const handleLogout = () => {
     // Clear all user-related data from localStorage
@@ -193,13 +205,20 @@ export function TeamLeaderSidebar({ isSidebarOpen, setSidebarOpen, isCollapsed, 
     router.push('/login');
   };
 
+  const getFirstName = (name: string | null) => {
+    if (!name) return '';
+    return name.split(' ')[0];
+  };
+
   const SidebarHeader = ({ isCollapsed, setIsCollapsed }: { isCollapsed: boolean, setIsCollapsed: (collapsed: boolean) => void }) => (
     <div className={cn("flex items-center h-20 border-b border-sidebar-border", isCollapsed ? "justify-center" : "px-4 justify-between")}>
       <div className="flex items-center">
-        <Avatar className="h-10 w-10 ">
-          <AvatarFallback className='bg-orange-500 text-primary-foreground'>TL</AvatarFallback>
+        <Avatar className="h-10 w-10 font-bold">
+          <AvatarFallback className='bg-orange-500 text-primary-foreground'>
+            {userName ? userName[0].toUpperCase() : 'T'}
+          </AvatarFallback>
         </Avatar>
-        {!isCollapsed && <h1 className="ml-3 text-md font-bold text-white">Team Leader</h1>}
+        {!isCollapsed && <h1 className="ml-3 text-md font-bold text-white">{getFirstName(userName) || 'Team Leader'}</h1>}
       </div>
       {!isCollapsed && (
         <Button onClick={() => setIsCollapsed(true)} variant="ghost" className="hidden lg:flex justify-center h-8 w-8 p-0 text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground">
@@ -233,13 +252,13 @@ export function TeamLeaderSidebar({ isSidebarOpen, setSidebarOpen, isCollapsed, 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className="flex items-center cursor-pointer group w-full">
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback>TL</AvatarFallback>
+                <Avatar className="h-10 w-10  font-bold">
+                  <AvatarFallback className='bg-orange-500 text-primary-foreground'>{userName ? userName[0].toUpperCase() : 'T'}</AvatarFallback>
                 </Avatar>
                 {!isCollapsed && (
                   <div className="ml-3">
-                    <p className="text-sm font-medium">Team Leader</p>
-                    <p className="text-xs text-muted-foreground group-hover:text-sidebar-foreground/80">leader@nexus.com</p>
+                    <p className="text-sm font-medium">{userName || 'Team Leader'}</p>
+                    <p className="text-xs text-muted-foreground group-hover:text-sidebar-foreground/80">{userEmail || 'leader@nexus.com'}</p>
                   </div>
                 )}
               </div>
@@ -247,9 +266,9 @@ export function TeamLeaderSidebar({ isSidebarOpen, setSidebarOpen, isCollapsed, 
             <DropdownMenuContent className="w-56 mb-2 ml-2 bg-popover border-border text-popover-foreground" align="end" forceMount>
                  <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">Team Leader</p>
+                        <p className="text-sm font-medium leading-none">{userName || 'Team Leader'}</p>
                         <p className="text-xs leading-none text-muted-foreground">
-                        leader@nexus.com
+                        {userEmail || 'leader@nexus.com'}
                         </p>
                     </div>
                 </DropdownMenuLabel>
@@ -278,7 +297,7 @@ export function TeamLeaderSidebar({ isSidebarOpen, setSidebarOpen, isCollapsed, 
       )} onClick={() => setSidebarOpen(false)}></div>
       <aside className={cn(
         "lg:hidden fixed left-0 top-0 h-full bg-sidebar text-sidebar-foreground flex flex-col justify-between border-r border-sidebar-border z-50 transition-transform duration-300 ease-in-out",
-        "w-64",
+        "w-60",
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       )}>
         <SidebarStructure isCollapsed={false} setIsCollapsed={() => {}} setSidebarOpen={setSidebarOpen} />
@@ -288,10 +307,12 @@ export function TeamLeaderSidebar({ isSidebarOpen, setSidebarOpen, isCollapsed, 
       {/* Desktop Sidebar */}
       <aside className={cn(
           "hidden lg:fixed left-0 top-0 h-full bg-sidebar text-sidebar-foreground lg:flex flex-col border-r border-sidebar-border transition-all duration-300 ease-in-out",
-          isCollapsed ? "w-20" : "w-64"
+          isCollapsed ? "w-18" : "w-60"
         )}>
           <div className='flex flex-col h-full'>
-            <SidebarStructure isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
+            <SidebarStructure isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} setSidebarOpen={function (open: boolean): void {
+            throw new Error('Function not implemented.');
+          } } />
             <SidebarFooter isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
           </div>
       </aside>

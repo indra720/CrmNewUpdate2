@@ -435,7 +435,7 @@ export default function Profile() {
                     .toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <Button size="icon" variant="secondary" className="absolute bottom-0 right-0 rounded-full shadow-md" onClick={() => setIsEditDialogOpen(true)}>
+              <Button size="icon" variant="secondary" className="absolute bottom-0 right-0 rounded-full shadow-md">
                 <Edit2 className="h-4 w-4" />
               </Button>
             </div>
@@ -472,7 +472,7 @@ export default function Profile() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2  lg:grid-cols-3 gap-6">
           {/* Contact Info */}
           <div className="dashboard-card bg-card shadow-lg rounded-lg p-6">
             <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
