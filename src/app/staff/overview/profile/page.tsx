@@ -63,6 +63,7 @@ interface ProfileData {
   join_referral: string | null;
   created_date: string;
   updated_date: string;
+  skills: string[];
 }
 
 const InputField = ({
@@ -154,19 +155,22 @@ const ReviewDetailItem = ({
   </div>
 );
 
-const stats = [
-  { label: "Total Leaves", value: "24", used: "8" },
-  { label: "Sick Leave", value: "12", used: "2" },
-  { label: "Casual Leave", value: "12", used: "6" },
+const initialLeaveStats = [
+  { label: "Total Leaves", value: "0", used: "0" },
+  { label: "Sick Leave", value: "0", used: "0" },
+  { label: "Casual Leave", value: "0", used: "0" },
 ];
 
 export default function Profile() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isSkillsDialogOpen, setIsSkillsDialogOpen] = useState(false);
+  const [editableSkills, setEditableSkills] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState("personal");
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [leaveStats, setLeaveStats] = useState(initialLeaveStats);
 
   const [editableData, setEditableData] = useState<{
     staff_id: string;
@@ -185,6 +189,7 @@ export default function Profile() {
     accountNumber: string;
     ifscCode: string;
     upiId: string;
+    profileImage: File | null;
     panCard: File | null;
     aadharCardFile: File | null;
   }>({
@@ -204,6 +209,7 @@ export default function Profile() {
     accountNumber: "",
     ifscCode: "",
     upiId: "",
+    profileImage: null,
     panCard: null,
     aadharCardFile: null,
   });
@@ -231,6 +237,7 @@ export default function Profile() {
         panCard: null,
         aadharCardFile: null,
       });
+      setEditableSkills(profile.skills || []);
     }
   }, [profile]);
 
@@ -272,13 +279,65 @@ export default function Profile() {
     };
 
     fetchProfile();
-  }, []);
+  }, [toast]);
+
+  useEffect(() => {
+    const fetchOverviewData = async () => {
+      if (!profile?.staff_id) return;
+
+      try {
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/profile/overview/staff/${profile.staff_id}/`,
+          {
+            headers: {
+              'Authorization': `Token ${token}`,
+            },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const profileData = data.profile_data; // Assume the data is nested under 'profile_data'
+
+          if (profileData) {
+            // Update Skills
+            if (profileData.skills && Array.isArray(profileData.skills)) {
+              setProfile(prevProfile => ({
+                ...prevProfile!,
+                skills: profileData.skills,
+              }));
+            }
+
+            // Update Leave Balance
+            if (profileData.leave_balance) {
+              setLeaveStats([
+                { label: "Total Leaves", value: profileData.leave_balance.total_leaves?.total || "0", used: profileData.leave_balance.total_leaves?.used || "0" },
+                { label: "Sick Leave", value: profileData.leave_balance.sick_leave?.total || "0", used: profileData.leave_balance.sick_leave?.used || "0" },
+                { label: "Casual Leave", value: profileData.leave_balance.casual_leave?.total || "0", used: profileData.leave_balance.casual_leave?.used || "0" },
+              ]);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch overview data:", error);
+      }
+    };
+
+    fetchOverviewData();
+  }, [profile?.staff_id, toast]);
+
 
   const profileImageUrl = useMemo(() => {
     if (editableData.profileImage) {
       return URL.createObjectURL(editableData.profileImage);
     }
-    return profile?.user.profile_image || "https://placehold.co/150x150/e2e8f0/a0aec0?text=Image";
+    if (profile?.user.profile_image) {
+      return `${process.env.NEXT_PUBLIC_API_BASE_URL}${profile.user.profile_image}`;
+    }
+    return "https://placehold.co/150x150/e2e8f0/a0aec0?text=Image";
   }, [editableData.profileImage, profile?.user.profile_image]);
 
   const handleEditChange = (
@@ -305,6 +364,76 @@ export default function Profile() {
       [name]: value,
     });
   };
+
+  const handleSkillsChange = (index: number, value: string) => {
+    const newSkills = [...editableSkills];
+    newSkills[index] = value;
+    setEditableSkills(newSkills);
+  };
+
+  const handleAddSkill = () => {
+    setEditableSkills([...editableSkills, ""]);
+  };
+
+  const handleRemoveSkill = (index: number) => {
+    const newSkills = editableSkills.filter((_, i) => i !== index);
+    setEditableSkills(newSkills);
+  };
+
+  const handleSkillsSubmit = async () => {
+    setIsSubmitting(true);
+    const payload = {
+      skills: editableSkills.filter(s => s.trim() !== ''),
+    };
+
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) throw new Error("Authentication token not found");
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/profile/update/`, 
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Token ${token}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Failed to update skills.");
+      }
+      
+      const updatedProfile = await response.json();
+
+      toast({
+        title: "Success!",
+        description: "Your skills have been updated.",
+        className: 'bg-green-500 text-white',
+      });
+
+      // Update the main profile state with the updated data from the response
+      setProfile(prevProfile => ({
+          ...prevProfile!,
+          ...updatedProfile, 
+      }));
+
+      setIsSkillsDialogOpen(false);
+
+    } catch (error: any) {
+      toast({
+        title: "Update Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
+
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -411,18 +540,16 @@ export default function Profile() {
   const manager = profile?.join_referral || 'N/A';
   const location = profile?.city ? `${profile.city}, ${profile.state}` : 'N/A';
  const fullAddress = profile?.address ? `${profile.address},${profile.state}, ${profile.pincode}` : 'N/A';  const education = profile?.degree || 'N/A';
-  // Skills are not in the API response, so we'll leave it empty for now
-  const skills: string[] = [];
+  const skills = profile?.skills || [];
 
   const employeeId = profile?.staff_id || 'N/A';
   const phone = profile?.mobile || 'N/A';
-  const department = 'N/A'; // Not in API response
-  
+
   return (
     <DashboardLayout>
-      <div className="space-y-6 bg-muted/70 shadow-sm rounded-lg p-6">
+      <div className="space-y-6 bg-muted/70 shadow-sm rounded-lg p-2 md:p-6">
         {/* Profile Header */}
-        <div className="dashboard-card bg-gradient-to-r from-primary/5 via-card to-card bg-card shadow-lg rounded-lg p-6">
+        <div className="dashboard-card bg-gradient-to-r from-primary/5 via-card to-card bg-card shadow-lg rounded-lg p-4 md:p-6">
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="relative">
               <Avatar className="h-32 w-32 ring-4 ring-primary/20 shadow-xl">
@@ -435,32 +562,35 @@ export default function Profile() {
                     .toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <Button size="icon" variant="secondary" className="absolute bottom-0 right-0 rounded-full shadow-md">
+              <Button size="icon" variant="secondary" className="absolute bottom-0 right-0 rounded-full shadow-md" onClick={() => setIsEditDialogOpen(true)}>
                 <Edit2 className="h-4 w-4" />
               </Button>
             </div>
             
-            <div className="flex-1 text-center md:text-left ">
-              <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
-                <h1 className="text-3xl font-bold text-foreground">{fullName}</h1>
+            <div className="flex-1 text-center md:text-left mt-4 md:mt-0">
+              <h1 className="text-3xl font-bold text-foreground mb-2">{fullName}</h1>
+
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-2 mb-4">
                 <span className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-semibold">
                   {employeeId}
                 </span>
+                <p className="text-lg text-muted-foreground">{designation}</p>
               </div>
-              <p className="text-lg text-muted-foreground mb-4">{designation}</p>
-              
-              <div className="flex flex-wrap justify-center md:justify-start gap-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Building2 className="h-4 w-4 text-primary" />
-                  {department}
-                </span>
-                <span className="flex items-center gap-1">
+
+              <div className="flex flex-col justify-center md:justify-start gap-y-2 text-sm text-muted-foreground">
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-2">
+                  <span className="flex items-center gap-1">
+                    <Tag className="h-4 w-4 text-primary" />
+                    {profile?.referral_code || 'N/A'}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    Joined {joiningDate}
+                  </span>
+                </div>
+                <span className="flex items-center gap-1 justify-center md:justify-start">
                   <MapPin className="h-4 w-4 text-primary" />
                   {fullAddress}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4 text-primary" />
-                  Joined {joiningDate}
                 </span>
               </div>
             </div>
@@ -500,11 +630,11 @@ export default function Profile() {
               </div>
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center">
-                  <Briefcase className="h-5 w-5 text-muted-foreground" />
+                  <Shield className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Reports To</p>
-                  <p className="font-medium text-foreground">{manager}</p>
+                  <p className="text-sm text-muted-foreground">Aadhar Card</p>
+                  <p className="font-medium text-foreground">{profile?.aadharCard || 'N/A'}</p>
                 </div>
               </div>
             </div>
@@ -517,7 +647,7 @@ export default function Profile() {
               Leave Balance
             </h2>
             <div className="space-y-4">
-              {stats.map((stat) => (
+              {leaveStats.map((stat) => (
                 <div key={stat.label} className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
                   <span className="text-muted-foreground">{stat.label}</span>
                   <div className="text-right">
@@ -540,21 +670,61 @@ export default function Profile() {
               <p className="font-medium text-foreground">{education}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground mb-2">Skills</p>
+              <div className="flex justify-between items-center mb-2">
+                <p className="text-sm text-muted-foreground">Skills</p>
+                <Button variant="ghost" size="icon" onClick={() => setIsSkillsDialogOpen(true)}>
+                  <Edit2 className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                </Button>
+              </div>
               <div className="flex flex-wrap gap-2">
-                {skills.map((skill) => (
+                {skills.length > 0 ? skills.map((skill) => (
                   <span 
                     key={skill} 
                     className="px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium"
                   >
                     {skill}
                   </span>
-                ))}
+                )) : <p className="text-sm text-muted-foreground">No skills added yet.</p>}
               </div>
             </div>
           </div>
         </div>
       </div>
+      <Dialog open={isSkillsDialogOpen} onOpenChange={setIsSkillsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Skills</DialogTitle>
+            <DialogDescription>
+              Add, remove, or edit your professional skills.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+            {editableSkills.map((skill, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <Input
+                  value={skill}
+                  onChange={(e) => handleSkillsChange(index, e.target.value)}
+                  placeholder={`Skill #${index + 1}`}
+                  className="flex-grow"
+                />
+                <Button variant="ghost" size="icon" onClick={() => handleRemoveSkill(index)}>
+                  <Users className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            ))}
+            <Button variant="outline" onClick={handleAddSkill} className="w-full">
+              Add Skill
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSkillsDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSkillsSubmit} disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Save Skills
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-4xl max-h-[95vh] p-0 bg-card rounded-2xl shadow-2xl flex flex-col">
           <DialogHeader className="p-6 md:p-8 pb-0 flex-shrink-0">
@@ -629,6 +799,15 @@ export default function Profile() {
                       onChange={handleEditChange}
                       required
                     />
+                     <InputField
+                        id="edit-profile-image"
+                        label="Profile Image"
+                        name="profileImage"
+                        type="file"
+                        onChange={handleEditChange}
+                      >
+                        <Input type="file" name="profileImage" onChange={handleEditChange} accept="image/*" className="pt-2" />
+                      </InputField>
                     <InputField
                       id="edit-dob"
                       label="Date of Birth"
@@ -912,3 +1091,14 @@ export default function Profile() {
     </DashboardLayout>
   );
 }
+
+
+
+
+
+
+
+
+
+
+

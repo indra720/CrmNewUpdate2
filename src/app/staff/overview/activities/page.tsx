@@ -67,7 +67,7 @@ export default function ActivitiesPage() {
       }
 
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/attendance/recent-history/`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/attendance/activities/`, {
           headers: {
             Authorization: `Token ${token}`,
           },

@@ -94,22 +94,7 @@ export default function Overview() {
     fetchStats();
   }, []);
 
-  const workDays = [
-    { day: "Mon", date: 8, status: "present" as const, hours: "21:06 hrs" },
-    { day: "Tue", date: 9, status: "present" as const, hours: "19:03 hrs" },
-    { day: "Wed", date: 10, status: "present" as const, hours: "22:34 hrs" },
-    { day: "Thu", date: 11, status: "today" as const },
-    { day: "Fri", date: 12, status: "absent" as const },
-    { day: "Sat", date: 13, status: "weekend" as const },
-    { day: "Sun", date: 14, status: "weekend" as const },
-  ];
-  
-  const departmentMembers = [
-    { id: "1", name: "Priya Sharma", status: "present" as const },
-    { id: "2", name: "Rahul Kumar", status: "present" as const },
-    { id: "3", name: "Sneha Patel", status: "yet-to-check-in" as const },
-    { id: "4", name: "Vikram Singh", status: "present" as const },
-  ];
+ 
   
   const upcomingHolidays = [
     { id: "1", name: "Christmas", date: "25 Dec 2025", icon: "🎄" },
@@ -153,14 +138,14 @@ export default function Overview() {
         <div className="lg:col-span-2 space-y-6">
           <GreetingCard name={""}/>
           
-          <WorkScheduleCard weekRange="08-14 Dec 2025" shiftType="Flexi Shift -24hrs" days={workDays}/>
+          <WorkScheduleCard />
         </div>
-        <div className="space-y-6">
+        <div className=" grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-2">
           
-          <ReportingToCard managerName={"Rajesh Gupta"} managerTitle={"Engineering Manager"} status={"yet-to-check-in"}/>
+          <ReportingToCard />
          
           
-          <DepartmentMembersCard members={departmentMembers} departmentName={"Engineering"}/> 
+          <DepartmentMembersCard /> 
           <UpcomingHolidaysCard holidays={upcomingHolidays}/>
         </div>
       </div>

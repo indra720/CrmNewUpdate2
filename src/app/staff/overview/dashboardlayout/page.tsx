@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState, useEffect, Suspense } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { EmployeeCard } from "@/app/staff/overview/EmployeeCard/EmployeeCard";
 import { NavigationTabs } from "@/app/staff/overview/Navigation/NavigationTabs";
@@ -15,7 +15,7 @@ const tabs = [
   { id: "leave", label: "Leave", path: "/staff/overview/leave" },
   { id: "attendance", label: "Attendance", path: "/staff/overview/attendance" },
   { id: "location", label: "Location", path: "/staff/overview/location" },
-  
+
 ];
 
 interface ProfileData {
@@ -25,13 +25,16 @@ interface ProfileData {
   state: string;
   pincode: string;
   staff_id: string;
+  user: {
+    profile_image: string | null;
+  }
 }
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
+function DashboardLayoutContent({ children }: DashboardLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
@@ -39,6 +42,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [staffName, setStaffName] = useState("Staff Member");
   const [staffLocation, setStaffLocation] = useState("N/A");
   const [staffId, setStaffId] = useState("N/A");
+  const [staffProfileImage, setStaffProfileImage] = useState<string | undefined>();
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -67,6 +71,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         setStaffName(data.name || "Staff Member");
         setStaffLocation(`${data.address}, ${data.city}, ${data.state} ${data.pincode}` || "N/A");
         setStaffId(data.staff_id || "N/A");
+        if (data.user?.profile_image) {
+          setStaffProfileImage(`${process.env.NEXT_PUBLIC_API_BASE_URL}${data.user.profile_image}`);
+        }
       } catch (err: any) {
         toast({
           title: "Error",
@@ -77,7 +84,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     };
 
     fetchProfile();
-  }, []);
+  }, [toast]);
 
   const activeTab =
     [...tabs].sort((a, b) => b.path.length - a.path.length).find(tab => pathname.startsWith(tab.path))?.id || "overview";
@@ -95,20 +102,29 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           employeeId={staffId}
           name={staffName}
           jobTitle="Technical Lead"
+          profileImageUrl={staffProfileImage}
           initialIsCheckedIn={false}
           checkInLocation={staffLocation}
         />
 
-        
-          <NavigationTabs
-            tabs={tabs.map(t => ({ id: t.id, label: t.label }))}
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-          />
-       
+
+        <NavigationTabs
+          tabs={tabs.map(t => ({ id: t.id, label: t.label }))}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+        />
+
 
         {children}
       </div>
     </div>
+  );
+}
+
+export default function DashboardLayout({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </Suspense>
   );
 }

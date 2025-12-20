@@ -29,22 +29,23 @@ interface RecentCheckIn {
   date: string;
   time: string;
   location: string;
-  type: string;
+  type: "check-in" | "check-out";
 }
 
 export default function Location() {
   const { toast } = useToast();
   const [mapUrl, setMapUrl] = useState("");
   const [isUrlDialogOpen, setIsUrlDialogOpen] = useState(false);
-  
+
   const [isCurrentlyCheckedIn, setIsCurrentlyCheckedIn] = useState(false);
   const [locationData, setLocationData] = useState<LocationData | null>(null);
   const [recentCheckIns, setRecentCheckIns] = useState<RecentCheckIn[]>([]);
-  
+  const [isLocationSet, setIsLocationSet] = useState(false);
+
   const [isLocationLoading, setIsLocationLoading] = useState(true);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
 
-  // Fetches location details ONLY if the user is checked in
+  // Fetches location details
   const fetchLocationDetails = async (token: string) => {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/see-location/`, {
@@ -54,10 +55,16 @@ export default function Location() {
         const data = await response.json();
         if (data && data.location_name) {
           setLocationData(data);
+          setIsLocationSet(true); // Location is set
+        } else {
+          setIsLocationSet(false); // No location is set
         }
+      } else {
+        setIsLocationSet(false);
       }
     } catch (error) {
       console.error("Failed to fetch location details:", error);
+      setIsLocationSet(false);
     }
   };
 
@@ -84,22 +91,33 @@ export default function Location() {
           const todaysRecord = historyData.results.find(rec => rec.date === today);
 
           // This is the key logic fix: determine status from the history API
+          await fetchLocationDetails(token); // Always fetch permanent location
+
           if (todaysRecord && todaysRecord.check_in && !todaysRecord.check_out) {
             setIsCurrentlyCheckedIn(true);
-            await fetchLocationDetails(token); // Fetch location details only if checked in
           } else {
             setIsCurrentlyCheckedIn(false);
-            setLocationData(null); // Clear location data if not checked in
           }
-          
+
           // Format and set history for display
-          const formattedData: RecentCheckIn[] = historyData.results.map((item: any) => ({
-            id: item.id.toString(),
-            date: new Date(item.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
-            time: item.check_in ? new Date(`2000-01-01T${item.check_in}`).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
-            location: item.location_name || 'Unknown Location',
-            type: item.check_out ? 'check-out' : 'check-in',
-          }));
+          const formattedData: RecentCheckIn[] = historyData.results.map(
+            (item: any, index: number) => ({
+              id: `${item.date}-${index}`, // 🔥 backend me id nahi hai
+              date: new Date(item.date).toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+              }),
+              time: item.check_in
+                ? new Date(`2000-01-01T${item.check_in}`).toLocaleTimeString('en-US', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
+                : 'N/A',
+              location: item.location_name || 'Unknown Location',
+              type: item.check_out ? 'check-out' : 'check-in',
+            })
+          );
+
           setRecentCheckIns(formattedData);
         }
       }
@@ -159,7 +177,8 @@ export default function Location() {
       toast({ title: "Success", description: "Location URL submitted successfully!" });
       setIsUrlDialogOpen(false);
       setMapUrl("");
-      
+      fetchInitialStatusAndHistory(); // Re-fetch to update button state and UI
+
     } catch (error: any) {
       console.error("Failed to save location URL:", error);
       toast({
@@ -177,16 +196,16 @@ export default function Location() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 bg-card shadow-sm rounded-sm p-6">
+      <div className="space-y-4 sm:space-y-6 bg-card shadow-sm rounded-sm p-4 sm:p-6"> {/* Reduced padding and space-y on mobile */}
         <div className="flex flex-col md:flex-row lg:flex-row items-center justify-between text-center">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Location & Address</h1>
-            <p className="text-muted-foreground">View your current status and location history</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground">Location & Address</h1> {/* Smaller title on mobile */}
+            <p className="text-sm sm:text-base text-muted-foreground">View your current status and location history</p> {/* Smaller subtitle on mobile */}
           </div>
           <Dialog open={isUrlDialogOpen} onOpenChange={setIsUrlDialogOpen}>
             <DialogTrigger asChild>
               {/* This button is now only for submitting a location URL and is disabled if already checked in */}
-              <Button disabled={isCurrentlyCheckedIn}>
+              <Button disabled={isLocationSet} className="mt-2 md:mt-0 w-full md:w-auto"> {/* Full width on mobile */}
                 <Navigation className="h-4 w-4 mr-2" />
                 Submit Location URL
               </Button>
@@ -218,82 +237,85 @@ export default function Location() {
         </div>
 
         {/* Current Status Card */}
-        <div className="dashboard-card bg-gradient-to-r from-primary/10 via-card to-card border-2 border-primary/20 p-6 rounded-lg shadow-md">
-          <div className="flex flex-col md:flex-row items-start gap-4">
-            <div className="h-14 w-14 rounded-2xl bg-primary/20 flex items-center justify-center mx-auto">
-              <MapPin className="h-7 w-7 text-primary" />
+        <div className="dashboard-card bg-gradient-to-r from-primary/10 via-card to-card border-2 border-primary/20 p-4 sm:p-6 rounded-lg shadow-md"> {/* Reduced padding on mobile */}
+          <div className="flex flex-col sm:flex-row sm:items-start gap-4"> {/* Row on sm+, col on mobile but with adjustments below */}
+            <div className="h-12 sm:h-14 w-12 sm:w-14 rounded-2xl bg-primary/20 flex items-center justify-center flex-shrink-0"> {/* Icon always left-ish, no mx-auto */}
+              <MapPin className="h-6 sm:h-7 w-6 sm:w-7 text-primary" />
             </div>
-            <div className="flex-1">
-              <div className="flex sm:flex-col md:flex-row items-center justify-between gap-2 mb-1">
-                <h2 className="text-xl font-bold text-foreground">Current Status</h2>
-                {isCurrentlyCheckedIn ? (
-                  <span className="bg-green-100 p-1 rounded-md text-green-500 flex justify-center items-center ">
+            <div className="flex-1 w-full"> {/* Full width for content */}
+              <div className="flex items-center justify-between gap-2 mb-1"> {/* Always row for title and badge, justified between for right-side badge on mobile */}
+                <h2 className="text-lg sm:text-xl font-bold text-foreground flex-1">Current Status</h2> {/* flex-1 to push badge to right */}
+                {isLocationSet ? (
+                  <span className="bg-green-100 p-1 rounded-md text-green-500 flex justify-center items-center min-w-fit whitespace-nowrap text-sm">
                     <CheckCircle className="h-3 w-3 mr-1" />
-                    Checked In
+                    Active
                   </span>
                 ) : (
-                  <span className="bg-red-100 p-1 rounded-md text-red-500 flex justify-center items-center ">
+                  <span className="bg-red-100 p-1 rounded-md text-red-500 flex justify-center items-center min-w-fit whitespace-nowrap text-sm">
                     <X className="h-3 w-3 mr-1" />
-                    Checked Out
+                    Inactive
                   </span>
                 )}
               </div>
               {isLocationLoading ? (
                 <div className="space-y-2">
-                  <Skeleton className="h-6 w-3/4" />
-                  <Skeleton className="h-5 w-full" />
+                  <Skeleton className="h-5 sm:h-6 w-3/4" />
+                  <Skeleton className="h-4 sm:h-5 w-full" />
                 </div>
-              ) : isCurrentlyCheckedIn && locationData ? (
-                <>
-                  <p className="text-lg text-primary font-medium mb-1">{locationData.location_name.split(',')[0]}</p>
-                  <p className="text-muted-foreground mb-2 text-lg">{locationData.location_name}</p>
-                  <div className="flex flex-col md:flex-row text-md items-center gap-4 text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-6 w-6 mr-1" />
+              ) : locationData ? (
+                <div className="space-y-2 text-center sm:text-left"> {/* Center on mobile, left on sm+; added space-y for better vertical flow */}
+                  <p className="text-base sm:text-lg text-primary font-medium mb-1 break-words">{locationData.location_name.split(',')[0]}</p> {/* Added break-words to force wrapping if needed */}
+                  <p className="text-sm sm:text-lg text-muted-foreground mb-2 break-all">{locationData.location_name}</p> {/* Changed to break-all for long URLs/locations; smaller on mobile */}
+                  <div className="flex flex-col sm:flex-row text-sm sm:text-md items-center gap-3 sm:gap-4 text-muted-foreground"> {/* Col on mobile for better stacking */}
+                    <span className="flex items-center gap-1 justify-center sm:justify-start">
+                      <Clock className="h-5 sm:h-6 w-5 sm:w-6 mr-1" />
                       Checked in at {formatTime(locationData.time)}
                     </span>
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1 justify-center sm:justify-start">
                       <Navigation className="h-4 w-4" />
                       {locationData.latitude.toFixed(4)}° N, {locationData.longitude.toFixed(4)}° E
                     </span>
                   </div>
-                </>
+                </div>
               ) : (
-                <p className="text-muted-foreground">You are currently checked out.</p>
+                <p className="text-sm sm:text-base text-muted-foreground">You have not set a permanent location yet.</p> 
               )}
             </div>
           </div>
         </div>
 
         {/* Recent History Card */}
-        <div className="dashboard-card">
-          <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Clock className="h-5 w-5 text-primary" />
+        <div className="dashboard-card p-4 sm:p-6"> {/* Reduced padding on mobile */}
+          <h2 className="text-base sm:text-lg font-semibold text-foreground mb-4 flex items-center gap-2"> {/* Smaller on mobile */}
+            <Clock className="h-4 sm:h-5 w-4 sm:h-5 text-primary" />
             Recent Location History
           </h2>
           <div className="space-y-3">
             {isHistoryLoading ? (
               <div className="space-y-3">
-                <Skeleton className="h-12 w-full" /> <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-10 sm:h-12 w-full" /> <Skeleton className="h-10 sm:h-12 w-full" />
               </div>
             ) : recentCheckIns.length > 0 ? (
               recentCheckIns.map((checkIn) => (
-                <div key={checkIn.id} className="flex items-start gap-4 p-3 rounded-xl bg-muted/70">
-                  <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${checkIn.type === 'check-in' ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
+                <div key={checkIn.id} className="flex items-start gap-3 sm:gap-4 p-3 rounded-xl bg-muted/70"> {/* Row on all, but content adjusts */}
+                  <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${checkIn.type === 'check-in' ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
                     <MapPin className="h-5 w-5" />
                   </div>
-                  <div className="flex-1 min-w-0 ">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-medium text-foreground capitalize">{checkIn.type.replace('-', ' ')}</span>
-                      <span className="text-sm text-muted-foreground">{checkIn.date}</span>
+                  <div className="flex-1 min-w-0"> {/* No w-full needed now */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-1"> {/* Row with wrap for type/date/time on one line, justified between */}
+                      <span className="font-medium text-foreground capitalize text-sm order-1">{checkIn.type.replace('-', ' ')}</span>
+                      <span className="text-xs sm:text-sm text-muted-foreground order-3 sm:order-2">{checkIn.date}</span>
+                      <p className="text-base sm:text-sm text-primary font-medium order-2 sm:order-3">{checkIn.time}</p> {/* Time as p but in row */}
                     </div>
-                    <p className="text-sm text-primary font-medium">{checkIn.time}</p>
-                    <p className="text-sm text-muted-foreground truncate">{checkIn.location}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground break-words flex items-center gap-1"> {/* Location with icon inline */}
+                      <MapPin className="h-3 w-3 flex-shrink-0" />
+                      {checkIn.location}
+                    </p>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-muted-foreground text-center py-4">No recent history available.</p>
+              <p className="text-sm sm:text-base text-muted-foreground text-center py-4">No recent history available.</p> 
             )}
           </div>
         </div>

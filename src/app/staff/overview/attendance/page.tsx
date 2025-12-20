@@ -1,3 +1,5 @@
+"use client";
+
 import DashboardLayout from "../dashboardlayout/page";
 import {
   Calendar,
@@ -7,14 +9,28 @@ import {
   AlertCircle,
   MapPin,
   Zap,
+  TrendingDown,
+  Target,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useState, ReactNode } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useEffect } from "react";
 
-const attendanceStats = [
-  { label: "Present Days", value: "22", total: "24", icon: CheckCircle, color: "text-success" },
-  { label: "Absent Days", value: "1", total: "24", icon: XCircle, color: "text-destructive" },
-  { label: "Late Arrivals", value: "2", total: "24", icon: AlertCircle, color: "text-warning" },
-  { label: "Avg Working Hrs", value: "8.5", total: "hrs/day", icon: Clock, color: "text-primary" },
-];
+interface StatItem {
+  total: ReactNode;
+  label: string;
+  value: string;
+  icon: React.ElementType;
+  color: string;
+}
+
+// const attendanceStats = [
+//   { label: "Present Days", value: "22", total: "24", icon: CheckCircle, color: "text-success" },
+//   { label: "Absent Days", value: "1", total: "24", icon: XCircle, color: "text-destructive" },
+//   { label: "Late Arrivals", value: "2", total: "24", icon: AlertCircle, color: "text-warning" },
+//   { label: "Avg Working Hrs", value: "8.5", total: "hrs/day", icon: Clock, color: "text-primary" },
+// ];
 
 const attendanceLog = [
   {
@@ -100,14 +116,151 @@ const monthlyCalendar = [
 ];
 
 export default function Attendance() {
+
+  const { toast } = useToast();
+  const [statsData, setStatsData] = useState<StatItem[]>([
+    {
+      label: "This Month", value: "0 Days", icon: Calendar, color: "text-primary",
+      total: ""
+    },
+    {
+      label: "Avg Hours/Day", value: "0 hrs", icon: Clock, color: "text-success",
+      total: ""
+    },
+    {
+      label: "On-Time Rate", value: "0%", icon: TrendingDown, color: "text-warning",
+      total: ""
+    },
+    {
+      label: "Tasks Done", value: "0", icon: Target, color: "text-primary",
+      total: ""
+    },
+  ]);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [calendarData, setCalendarData] = useState([]);
+  const [isLoadingCalendar, setIsLoadingCalendar] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      setIsLoadingStats(true);
+      try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          toast({
+            title: "Authentication Error",
+            description: "No auth token found. Please log in.",
+            variant: "destructive",
+          });
+          setIsLoadingStats(false);
+          return;
+        }
+
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = (now.getMonth() + 1).toString().padStart(2, '0');
+        const monthParam = `${year}-${month}`;
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/attendance/tracker/?month=${monthParam}`, {
+          headers: {
+            'Authorization': `Token ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        setStatsData(prevStats => prevStats.map(stat => {
+          if (stat.label === "This Month") {
+            return { ...stat, value: `${data.present_days || 0} Days` };
+          }
+          if (stat.label === "Avg Hours/Day") {
+            return { ...stat, value: `${data.avg_working_hours ? data.avg_working_hours.toFixed(1) : 0} hrs` };
+          }
+          if (stat.label === "On-Time Rate") {
+            return { ...stat, label: "Late Arrivals", value: `${data.late_arrivals || 0}` };
+          }
+          if (stat.label === "Tasks Done") {
+            return { ...stat, label: "Absent Days", value: `${data.absent_days || 0} Days` };
+          }
+          return stat;
+        }));
+
+      } catch (error: any) {
+        console.error("Failed to fetch attendance tracker stats:", error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to load attendance stats.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingStats(false);
+      }
+    };
+
+    fetchStats();
+  }, [toast]);
+
+  useEffect(() => {
+    const fetchCalendarData = async () => {
+      setIsLoadingCalendar(true);
+      try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          toast({
+            title: "Authentication Error",
+            description: "No auth token found. Please log in.",
+            variant: "destructive",
+          });
+          setIsLoadingCalendar(false);
+          return;
+        }
+
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = (now.getMonth() + 1).toString().padStart(2, '0');
+        const monthParam = `${year}-${month}`;
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/attendance/calendar/?month=${monthParam}`, {
+          headers: {
+            'Authorization': `Token ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setCalendarData(data.calendar);
+
+      } catch (error: any) {
+        console.error("Failed to fetch calendar data:", error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to load calendar data.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingCalendar(false);
+      }
+    };
+
+    fetchCalendarData();
+  }, [toast]);
+
   const getStatusColor = (status) => {
     switch (status) {
       case "present":
-        return "bg-success";
+        return "bg-green-400";
       case "absent":
-        return "bg-destructive";
+        return "bg-red-400";
       case "late":
-        return "bg-warning";
+        return "bg-yellow-400";
       case "weekend":
         return "bg-muted-foreground/30";
       case "today":
@@ -156,35 +309,35 @@ export default function Attendance() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 ">
-          {attendanceStats.map((stat, index) => (
-            <div
-              key={stat.label}
-              className="dashboard-card animate-fade-in bg-card shadow-sm rounded-sm p-6"
-              style={{ animationDelay: `${index * 0.05}s` }}
-            >
-              <div className="flex items-center gap-3 mb-3 ">
-                <div
-                  className={`h-10 w-10 rounded-xl bg-muted flex items-center justify-center ${stat.color}`}
-                >
-                  <stat.icon className="h-5 w-5" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {isLoadingStats ? (
+            Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="dashboard-card flex items-center gap-4 border border-border bg-card rounded-md shadow-sm p-6">
+                <Skeleton className="h-12 w-12 rounded-xl" />
+                <div>
+                  <Skeleton className="h-7 w-24 mb-2" />
+                  <Skeleton className="h-4 w-32" />
                 </div>
-                <span className="text-lg font-bold md:text-sm text-muted-foreground">
-                  {stat.label}
-                </span>
               </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-bold text-foreground">
-                  {stat.value}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  / {stat.total}
-                </span>
+            ))
+          ) : (
+            statsData.map((stat, index) => (
+              <div
+                key={stat.label}
+                className="dashboard-card flex items-center gap-4 animate-fade-in border border-border bg-card rounded-md shadow-sm p-6"
+                style={{ animationDelay: `${index * 0.05}s` }}
+              >
+                <div className={`h-12 w-12 rounded-xl bg-muted flex items-center justify-center ${stat.color}`}>
+                  <stat.icon className="h-6 w-6" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
-
         {/* Calendar + Logs */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Monthly Overview */}
@@ -226,19 +379,25 @@ export default function Attendance() {
             </div>
 
             <div className="grid grid-cols-7 gap-2">
-              {monthlyCalendar.map((day) => (
-                <div
-                  key={day.date}
-                  className={`aspect-square rounded-lg flex items-center justify-center text-sm font-semibold transition-all duration-200 hover:scale-110 cursor-pointer ${day.status === "today"
+              {isLoadingCalendar ? (
+                Array.from({ length: 35 }).map((_, index) => (
+                  <Skeleton key={index} className="aspect-square rounded-lg" />
+                ))
+              ) : (
+                calendarData.map((day: any) => (
+                  <div
+                    key={day.date}
+                    className={`aspect-square rounded-lg flex items-center justify-center text-sm font-semibold transition-all duration-200 hover:scale-110 cursor-pointer ${day.status.toLowerCase() === "today"
                       ? "bg-blue-600 text-white ring-4 ring-blue-200 shadow-lg"
-                      : day.status === "future"
+                      : day.status.toLowerCase() === "future"
                         ? "bg-slate-100 text-slate-400"
-                        : `${getStatusColor(day.status)} text-white hover:shadow-md`
-                    }`}
-                >
-                  {day.date}
-                </div>
-              ))}
+                        : `${getStatusColor(day.status.toLowerCase())} text-white hover:shadow-md`
+                      }`}
+                  >
+                    {day.day}
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -375,4 +534,3 @@ export default function Attendance() {
     </DashboardLayout>
   );
 }
-
