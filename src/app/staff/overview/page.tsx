@@ -95,11 +95,6 @@ export default function Overview() {
   }, []);
 
  
-  
-  const upcomingHolidays = [
-    { id: "1", name: "Christmas", date: "25 Dec 2025", icon: "🎄" },
-    { id: "2", name: "New Year", date: "01 Jan 2026", icon: "🎉" },
-  ];
 
   return (
     <DashboardLayout>
@@ -146,7 +141,7 @@ export default function Overview() {
          
           
           <DepartmentMembersCard /> 
-          <UpcomingHolidaysCard holidays={upcomingHolidays}/>
+          <UpcomingHolidaysCard />
         </div>
       </div>
     </DashboardLayout>

@@ -9,9 +9,9 @@ import { useToast } from "@/hooks/use-toast";
 const tabs = [
   { id: "overview", label: "Overview", path: "/staff/overview" },
   { id: "activities", label: "Activities", path: "/staff/overview/activities" },
-  { id: "feeds", label: "Feeds", path: "/staff/overview/feeds" },
+  // { id: "feeds", label: "Feeds", path: "/staff/overview/feeds" },
   { id: "profile", label: "Profile", path: "/staff/overview/profile" },
-  { id: "approvals", label: "Approvals", path: "/staff/overview/approvals" },
+  // { id: "approvals", label: "Approvals", path: "/staff/overview/approvals" },
   { id: "leave", label: "Leave", path: "/staff/overview/leave" },
   { id: "attendance", label: "Attendance", path: "/staff/overview/attendance" },
   { id: "location", label: "Location", path: "/staff/overview/location" },

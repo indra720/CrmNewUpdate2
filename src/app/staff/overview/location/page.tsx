@@ -100,22 +100,46 @@ export default function Location() {
           }
 
           // Format and set history for display
-          const formattedData: RecentCheckIn[] = historyData.results.map(
-            (item: any, index: number) => ({
-              id: `${item.date}-${index}`, // 🔥 backend me id nahi hai
-              date: new Date(item.date).toLocaleDateString('en-GB', {
+          const formattedData: RecentCheckIn[] = historyData.results.flatMap(
+            (item: any) => {
+              const entries: RecentCheckIn[] = [];
+              const itemDate = new Date(item.date).toLocaleDateString('en-GB', {
                 day: '2-digit',
                 month: 'short',
-              }),
-              time: item.check_in
-                ? new Date(`2000-01-01T${item.check_in}`).toLocaleTimeString('en-US', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })
-                : 'N/A',
-              location: item.location_name || 'Unknown Location',
-              type: item.check_out ? 'check-out' : 'check-in',
-            })
+              });
+      
+              // Create a check-in entry if time exists
+              if (item.check_in) {
+                entries.push({
+                  id: `${item.date}-check-in`,
+                  date: itemDate,
+                  time: new Date(`1970-01-01T${item.check_in}`).toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                  }),
+                  location: item.location_name || 'Unknown Location',
+                  type: 'check-in',
+                });
+              }
+      
+              // Create a check-out entry if time exists
+              if (item.check_out) {
+                entries.push({
+                  id: `${item.date}-check-out`,
+                  date: itemDate,
+                  time: new Date(`1970-01-01T${item.check_out}`).toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                  }),
+                  location: item.location_name || 'Unknown Location',
+                  type: 'check-out',
+                });
+              }
+      
+              return entries;
+            }
           );
 
           setRecentCheckIns(formattedData);
@@ -323,3 +347,34 @@ export default function Location() {
     </DashboardLayout>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// {
+//     "count": 1, 
+//     "results": [
+//         {
+//             "date": "2025-12-22",
+//             "check_in": "16:28:39",
+//             "check_out": "16:32:49",
+//             "working_hours": "0:04:10.240188",
+//             "status": "Half Day",
+//             "location_name": "Ajmer Road, Neelkanth Colony, Shyam Nagar, Jaipur, Jaipur Municipal Corporation, Jaipur Tehsil, Jaipur, Rajasthan, 302001, India",
+//             "latitude": 26.8983404,
+//             "longitude": 75.7555765,
+//             "location_time": "2025-12-20T11:28:44.009608Z"
+//         }
+//     ]
+// }

@@ -1,6 +1,6 @@
 'use client';
 
-import { Calendar, Loader2 } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,7 +8,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface DayStatus {
   day: string;
   date: number;
-  status: "present" | "absent" | "weekend" | "today" | "late" | "future";
+  status:
+    | "present"
+    | "absent"
+    | "late"
+    | "half day"
+    | "weekend"
+    | "today"
+    | "future"
+    | "pending_checkout";
   hours?: string;
 }
 
@@ -16,84 +24,120 @@ export function WorkScheduleCard() {
   const { toast } = useToast();
   const [days, setDays] = useState<DayStatus[]>([]);
   const [weekRange, setWeekRange] = useState("");
-  const [shiftType, setShiftType] = useState("General Shift"); // This can be dynamic later
+  const [shiftType] = useState("General Shift");
   const [isLoading, setIsLoading] = useState(true);
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
 
+  /* =========================
+      SAME CHECK-IN LOGIC AS ATTENDANCE
+     ========================= */
+  useEffect(() => {
+    const updateCheckInStatus = () => {
+      const checkInData = localStorage.getItem("checkInData");
+      setIsCheckedIn(!!checkInData);
+    };
+
+    updateCheckInStatus();
+    window.addEventListener("attendanceUpdated", updateCheckInStatus);
+
+    return () => {
+      window.removeEventListener("attendanceUpdated", updateCheckInStatus);
+    };
+  }, []);
+
+  /* =========================
+      FETCH CALENDAR (SAME AS ATTENDANCE)
+     ========================= */
   useEffect(() => {
     const fetchWorkSchedule = async () => {
       setIsLoading(true);
       try {
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-          toast({
-            title: "Authentication Error",
-            description: "No auth token found.",
-            variant: "destructive",
-          });
-          return;
-        }
+        const token = localStorage.getItem("authToken");
+        if (!token) throw new Error("No auth token");
 
         const now = new Date();
         const year = now.getFullYear();
-        const month = (now.getMonth() + 1).toString().padStart(2, '0');
-        const monthParam = `${year}-${month}`;
+        const month = String(now.getMonth() + 1).padStart(2, "0");
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/attendance/calendar/?month=${monthParam}`, {
-          headers: {
-            'Authorization': `Token ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/attendance/calendar/?month=${year}-${month}`,
+          {
+            headers: {
+              Authorization: `Token ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error("Calendar fetch failed");
 
         const data = await response.json();
         const calendarData = data.calendar;
-        
-        // Logic to find the current week
-        const today = now.getDate();
-        const todayIndex = calendarData.findIndex(d => d.day === today);
+
+        const todayDate = now.getDate();
+        const todayIndex = calendarData.findIndex(
+          (d: any) => d.day === todayDate
+        );
 
         if (todayIndex === -1) {
-          throw new Error("Could not find today in calendar data.");
+          setDays([]);
+          setIsLoading(false);
+          return;
         }
 
-        const currentDayOfWeek = now.getDay(); // Sunday is 0, Monday is 1
-        const startOfWeekIndex = todayIndex - (currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1);
+        const currentDayOfWeek = now.getDay(); // Sun = 0
+        const startIndex =
+          todayIndex - (currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1);
 
-        const weekData = Array.from({ length: 7 }).map((_, i) => {
-            const dayIndex = startOfWeekIndex + i;
-            if (dayIndex < 0 || dayIndex >= calendarData.length) {
-                // This can happen for days at the beginning/end of the month's first/last week
-                return null;
+        const weekData: DayStatus[] = [];
+
+        for (let i = 0; i < 7; i++) {
+          const idx = startIndex + i;
+          if (idx < 0 || idx >= calendarData.length) continue;
+
+          const d = calendarData[idx];
+          const isToday = d.day === todayDate;
+
+          let finalStatus: DayStatus["status"];
+
+          // ✅ EXACT SAME AS ATTENDANCE CALENDAR
+          if (isToday) {
+            if (d.check_out_time) {
+              // Checkout done → backend status decides (present / half day / late)
+              finalStatus = d.status.toLowerCase();
+            } else if (isCheckedIn) {
+              // Checked in but not checked out
+              finalStatus = "pending_checkout";
+            } else {
+              // Today but not checked in
+              finalStatus = "today";
             }
-            const dayData = calendarData[dayIndex];
-            const isToday = dayData.day === today;
+          } else {
+            // Past / future days → backend status
+            finalStatus = d.status.toLowerCase();
+          }
 
-            return {
-                day: dayData.weekday,
-                date: dayData.day,
-                status: isToday ? "today" : dayData.status.toLowerCase(),
-            };
-        }).filter(Boolean);
-
-        setDays(weekData as DayStatus[]);
-        
-        // Set week range for display
-        if (weekData.length > 0) {
-            const startDate = weekData[0].date;
-            const endDate = weekData[weekData.length - 1].date;
-            const monthName = now.toLocaleString('default', { month: 'short' });
-            setWeekRange(`${startDate} ${monthName} - ${endDate} ${monthName}`);
+          weekData.push({
+            day: d.weekday,
+            date: d.day,
+            status: finalStatus,
+            hours: d.working_hours || undefined,
+          });
         }
 
-      } catch (error: any) {
-        console.error("Failed to fetch work schedule:", error);
+        setDays(weekData);
+
+        if (weekData.length) {
+          const start = weekData[0].date;
+          const end = weekData[weekData.length - 1].date;
+          const monthName = now.toLocaleString("default", { month: "short" });
+          setWeekRange(`${start} ${monthName} - ${end} ${monthName}`);
+        }
+      } catch (error) {
+        console.error(error);
         toast({
           title: "Error",
-          description: "Failed to load work schedule.",
+          description: "Failed to load work schedule",
           variant: "destructive",
         });
       } finally {
@@ -102,66 +146,76 @@ export function WorkScheduleCard() {
     };
 
     fetchWorkSchedule();
-  }, [toast]);
+    window.addEventListener("attendanceUpdated", fetchWorkSchedule);
 
-  const getStatusColor = (status: DayStatus["status"]) => {
+    return () => {
+      window.removeEventListener("attendanceUpdated", fetchWorkSchedule);
+    };
+  }, [toast, isCheckedIn]);
+
+  /* =========================
+      COLORS (MATCH ATTENDANCE)
+     ========================= */
+  const getStatusColor = (
+    status: DayStatus["status"],
+    isTimeline = false
+  ) => {
     switch (status) {
       case "present":
-        return "bg-green-500";
+        return "bg-emerald-500";
+      case "half day":
+        return "bg-blue-500";
+      case "late":
+        return "bg-amber-500";
       case "absent":
         return "bg-red-500";
-      case "late":
-          return "bg-yellow-500";
-      case "weekend":
-        return "bg-gray-400";
+      case "pending_checkout":
+        return "bg-orange-400";
       case "today":
-        return "bg-blue-500";
+        return "bg-blue-600";
+      case "weekend":
+        return isTimeline ? "bg-slate-300" : "bg-slate-200 text-slate-500";
       case "future":
-        return "bg-gray-200";
+        return isTimeline ? "bg-slate-200" : "bg-slate-100 text-slate-400";
       default:
-        return "bg-gray-200";
+        return "bg-muted";
     }
   };
 
   const getStatusLabel = (status: DayStatus["status"]) => {
+    if (status === "half day") return "Half Day";
+    if (status === "pending_checkout") return "Checked In";
     return status.charAt(0).toUpperCase() + status.slice(1);
   };
-  
+
+  /* =========================
+      LOADING
+     ========================= */
   if (isLoading) {
     return (
-        <div className="dashboard-card bg-card p-3">
-             <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                    <Skeleton className="h-10 w-10 rounded-xl" />
-                    <div>
-                        <Skeleton className="h-5 w-32 mb-1" />
-                        <Skeleton className="h-4 w-24" />
-                    </div>
-                </div>
-                <Skeleton className="h-8 w-24 rounded-full" />
-            </div>
-            <div className="flex gap-1 mb-4">
-                {Array.from({ length: 7 }).map((_, index) => (
-                    <Skeleton key={index} className="h-2 flex-1 rounded-full" />
-                ))}
-            </div>
-            <div className="grid grid-cols-7 gap-2">
-                {Array.from({ length: 7 }).map((_, index) => (
-                    <div key={index} className="text-center p-2 rounded-xl">
-                        <Skeleton className="h-4 w-8 mx-auto mb-1" />
-                        <Skeleton className="h-7 w-7 mx-auto rounded-full" />
-                         <Skeleton className="h-4 w-12 mx-auto mt-1" />
-                    </div>
-                ))}
-            </div>
+      <div className="dashboard-card bg-card p-3">
+        <Skeleton className="h-6 w-32 mb-3" />
+        <div className="flex gap-1 mb-4">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <Skeleton key={i} className="h-2 flex-1 rounded-full" />
+          ))}
         </div>
+        <div className="grid grid-cols-7 gap-2">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <Skeleton key={i} className="h-[96px] rounded-xl" />
+          ))}
+        </div>
+      </div>
     );
   }
 
+  /* =========================
+      UI
+     ========================= */
   return (
     <div className="dashboard-card bg-card p-3">
       <div className="flex items-center justify-between mb-4">
-        <div className="flex flex-col md:flex-row items-center gap-3">
+        <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
             <Calendar className="h-5 w-5 text-primary" />
           </div>
@@ -170,46 +224,45 @@ export function WorkScheduleCard() {
             <p className="text-sm text-muted-foreground">{weekRange}</p>
           </div>
         </div>
+
         <span className="px-3 py-1 rounded-full bg-accent text-accent-foreground text-sm font-medium">
           {shiftType}
         </span>
       </div>
 
-      {/* Timeline bar */}
+      {/* Timeline */}
       <div className="flex gap-1 mb-4">
-        {days.map((day, index) => (
+        {days.map((day, i) => (
           <div
-            key={index}
-            className={`h-2 flex-1 rounded-full ${getStatusColor(day.status)}`}
-            title={`${day.day}, ${day.date} - ${getStatusLabel(day.status)}`}
+            key={i}
+            className={`h-2 flex-1 rounded-full ${getStatusColor(
+              day.status,
+              true
+            )}`}
           />
         ))}
       </div>
 
-      {/* Days grid */}
+      {/* Days Grid */}
       <div className="grid grid-cols-3 md:grid-cols-7 gap-2">
-        {days.map((day, index) => (
+        {days.map((day, i) => (
           <div
-            key={index}
-            className={`text-center p-2 rounded-xl transition-colors font-semibold ${
-                day.status === 'today'
-                  ? 'bg-primary/10 ring-2 ring-primary text-primary'
-                  : (day.status === 'future' || day.status === 'weekend')
-                  ? `${getStatusColor(day.status)} text-muted-foreground`
-                  : `${getStatusColor(day.status)} text-white`
+            key={i}
+            className={`min-h-[96px] text-center p-2 rounded-xl font-semibold
+              flex flex-col items-center justify-center gap-1
+              ${
+                day.status === "future" || day.status === "weekend"
+                  ? getStatusColor(day.status)
+                  : `${getStatusColor(day.status)} text-white ring-1 ring-black/5`
               }`}
           >
-            <p className="text-xs opacity-80 mb-1">{day.day}</p>
-            <p className="text-lg">
-              {day.date}
-            </p>
-            <p className="text-xs opacity-80 mt-1">
+            <p className="text-[10px] opacity-80">{day.day}</p>
+            <p className="text-lg leading-none">{day.date}</p>
+            <p className="text-[10px] opacity-80">
               {getStatusLabel(day.status)}
             </p>
             {day.hours && (
-              <p className="text-xs font-medium mt-1">
-                {day.hours}
-              </p>
+              <p className="text-[10px] font-medium">{day.hours}</p>
             )}
           </div>
         ))}

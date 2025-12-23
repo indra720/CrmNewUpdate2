@@ -287,7 +287,14 @@ export default function Profile() {
 
       try {
         const token = localStorage.getItem('authToken');
-        if (!token) return;
+        if (!token) {
+          toast({
+            title: "Authentication Error",
+            description: "Cannot fetch overview data without logging in.",
+            variant: "destructive",
+          });
+          return;
+        }
 
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/profile/overview/staff/${profile.staff_id}/`,
@@ -298,35 +305,44 @@ export default function Profile() {
           }
         );
 
-        if (response.ok) {
-          const data = await response.json();
-          const profileData = data.profile_data; // Assume the data is nested under 'profile_data'
-
-          if (profileData) {
-            // Update Skills
-            if (profileData.skills && Array.isArray(profileData.skills)) {
-              setProfile(prevProfile => ({
-                ...prevProfile!,
-                skills: profileData.skills,
-              }));
-            }
-
-            // Update Leave Balance
-            if (profileData.leave_balance) {
-              setLeaveStats([
-                { label: "Total Leaves", value: profileData.leave_balance.total_leaves?.total || "0", used: profileData.leave_balance.total_leaves?.used || "0" },
-                { label: "Sick Leave", value: profileData.leave_balance.sick_leave?.total || "0", used: profileData.leave_balance.sick_leave?.used || "0" },
-                { label: "Casual Leave", value: profileData.leave_balance.casual_leave?.total || "0", used: profileData.leave_balance.casual_leave?.used || "0" },
-              ]);
-            }
-          }
+        if (!response.ok) {
+          throw new Error('Failed to fetch profile overview data.');
         }
-      } catch (error) {
+        
+        const data = await response.json();
+
+        // Update Skills from data.skills_education
+        if (data.skills_education && Array.isArray(data.skills_education.skills)) {
+          setProfile(prevProfile => {
+            if (prevProfile) {
+              return { ...prevProfile, skills: data.skills_education.skills };
+            }
+            return null;
+          });
+        }
+
+        // Update Leave Balance from data.leave_status
+        if (data.leave_status) {
+          setLeaveStats([
+            { label: "Total Leaves", value: String(data.leave_status.total?.total || 0), used: String(data.leave_status.total?.used || 0) },
+            { label: "Sick Leave", value: String(data.leave_status.sick?.total || 0), used: String(data.leave_status.sick?.used || 0) },
+            { label: "Casual Leave", value: String(data.leave_status.casual?.total || 0), used: String(data.leave_status.casual?.used || 0) },
+          ]);
+        }
+
+      } catch (error: any) {
         console.error("Failed to fetch overview data:", error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to load skills and leave data.",
+          variant: "destructive",
+        });
       }
     };
 
-    fetchOverviewData();
+    if (profile?.staff_id) {
+      fetchOverviewData();
+    }
   }, [profile?.staff_id, toast]);
 
 
@@ -800,12 +816,11 @@ export default function Profile() {
                       required
                     />
                      <InputField
-                        id="edit-profile-image"
-                        label="Profile Image"
-                        name="profileImage"
-                        type="file"
-                        onChange={handleEditChange}
-                      >
+                      id="edit-profile-image"
+                      label="Profile Image"
+                      name="profileImage"
+                      type="file"
+                      onChange={handleEditChange} value={''}                      >
                         <Input type="file" name="profileImage" onChange={handleEditChange} accept="image/*" className="pt-2" />
                       </InputField>
                     <InputField
@@ -1091,6 +1106,11 @@ export default function Profile() {
     </DashboardLayout>
   );
 }
+
+
+
+
+
 
 
 

@@ -49,7 +49,7 @@ export function EmployeeCard({
     workProgress: "",
   });
   const [elapsedTime, setElapsedTime] = useState("00:00:00");
-  
+
   useEffect(() => {
     try {
       const savedCheckInData = localStorage.getItem('checkInData');
@@ -61,7 +61,7 @@ export function EmployeeCard({
         if (isNaN(checkInDate.getTime())) {
           throw new Error("Invalid check-in time in localStorage");
         }
-        
+
         setIsCheckedIn(true);
         setCheckInTime(checkInDate);
         setCurrentCheckInLocation(location);
@@ -143,7 +143,7 @@ export function EmployeeCard({
         setIsCheckedIn(true);
         setCheckInTime(now);
         setCurrentCheckInLocation(locationData.location_name);
-        
+
         // Save to localStorage
         const checkInData = { time: now.toISOString(), location: locationData.location_name };
         localStorage.setItem('checkInData', JSON.stringify(checkInData));
@@ -153,6 +153,7 @@ export function EmployeeCard({
           description: "Check-in successful",
           className: 'bg-green-500 text-white'
         });
+        window.dispatchEvent(new Event('attendanceUpdated')); // Dispatch custom event
       } else {
         const errorData = await response.json();
         console.error("Check-in error:", errorData);
@@ -211,7 +212,7 @@ export function EmployeeCard({
     }
     setCheckoutModalOpen(true);
   };
-  
+
   const handleCheckoutFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setCheckoutFormData({ ...checkoutFormData, [name]: value });
@@ -253,7 +254,7 @@ export function EmployeeCard({
         setIsCheckedIn(false);
         setCheckInTime(undefined);
         setCurrentCheckInLocation('');
-        
+
         // Clear from localStorage
         localStorage.removeItem('checkInData');
 
@@ -262,7 +263,7 @@ export function EmployeeCard({
           description: "Your work has been logged successfully.",
           className: 'bg-green-500 text-white'
         });
-        
+
         setCheckoutModalOpen(false);
         setCheckoutFormData({
           projectName: "",
@@ -332,16 +333,15 @@ export function EmployeeCard({
             </AvatarFallback>
           </Avatar>
           <div
-            className={`absolute -bottom-1 -right-1 h-6 w-6 rounded-full border-4 border-card ${
-              isCheckedIn ? "bg-green-300 animate-pulse" : "bg-destructive"
-            }`}
+            className={`absolute -bottom-1 -right-1 h-6 w-6 rounded-full border-4 border-card ${isCheckedIn ? "bg-green-300 animate-pulse" : "bg-destructive"
+              }`}
           />
         </div>
 
         {/* Info */}
         <div className="flex flex-1 flex-col items-center md:items-start">
-          <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
-            <span className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-semibold">
+          <div className="flex flex-col md:flex-row md:items-center justify-center  gap-2 mb-2 w-auto">
+            <span className="inline-flex w-fit items-center justify-center px-3  py-1 rounded-full bg-primary/10 text-primary text-sm font-semibold whitespace-nowrap">
               {employeeId}
             </span>
             <h2 className="text-2xl font-bold text-foreground">{name}</h2>
@@ -351,16 +351,14 @@ export function EmployeeCard({
 
           <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
             <span
-              className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors ${
-                isCheckedIn
+              className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors ${isCheckedIn
                   ? "bg-green-100 text-green-800 animate-pulse"
                   : "bg-red-100 text-red-800"
-              }`}
+                }`}
             >
               <span
-                className={`h-2 w-2 rounded-full mr-2 ${
-                  isCheckedIn ? "bg-green-500" : "bg-destructive"
-                }`}
+                className={`h-2 w-2 rounded-full mr-2 ${isCheckedIn ? "bg-green-500" : "bg-destructive"
+                  }`}
               />
               {isCheckedIn ? "Checked In" : "Checked Out"}
             </span>
