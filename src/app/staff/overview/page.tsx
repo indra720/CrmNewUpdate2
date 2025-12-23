@@ -3,12 +3,13 @@ import { TrendingUp, Clock, Calendar, Target, TrendingDown } from "lucide-react"
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from "./dashboardlayout/page";
 import { GreetingCard } from "./GreetingCard/GreetingCard";
-import { WorkScheduleCard } from "./workschedulecard/page";
-import { ReportingToCard } from "./reportingtocard/page";
-import { DepartmentMembersCard } from "./departmentmemberscard/page";
-import { UpcomingHolidaysCard } from "./upcomingholiday/page";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { WorkScheduleCard } from "./WorkScheduleCard";
+import { ReportingToCard } from "./ReportingToCard";
+import { DepartmentMembersCard } from "./DepartmentMembersCard";
+import { UpcomingHolidaysCard } from "./UpcomingHolidaysCard";
 
 
 // ... (existing workDays, departmentMembers, upcomingHolidays) ...
@@ -94,7 +95,7 @@ export default function Overview() {
     fetchStats();
   }, []);
 
- 
+
 
   return (
     <DashboardLayout>
@@ -131,16 +132,16 @@ export default function Overview() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <GreetingCard name={""}/>
-          
+          <GreetingCard name={""} />
+
           <WorkScheduleCard />
         </div>
         <div className=" grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-2">
-          
+
           <ReportingToCard />
-         
-          
-          <DepartmentMembersCard /> 
+
+
+          <DepartmentMembersCard />
           <UpcomingHolidaysCard />
         </div>
       </div>
