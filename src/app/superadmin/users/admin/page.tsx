@@ -332,7 +332,7 @@ export default function AdminManagementPage() {
       setcardData(data);
       const fetchedUsers = data.users.map((user: any) => ({
         ...user,
-        self_user: { user_active: user.user.is_admin }, // Assuming is_admin determines active status for admin users
+        self_user: { user_active: user.is_active }, // Assuming user.is_active is the field for active status
       }));
       setUsers(fetchedUsers);
     } catch (err: any) {
@@ -557,6 +557,10 @@ export default function AdminManagementPage() {
     );
 
     try {
+      console.log(`Attempting to toggle user status:
+        User ID: ${id},
+        User Type: admin,
+        Is Active: ${isActive}`);
       await toggleUserActiveStatus(id, "admin", isActive);
 
       // 3. Success: Show toast
@@ -574,7 +578,7 @@ export default function AdminManagementPage() {
     } catch (error: any) {
       // 2. Failure: Revert state and show error
       setUsers(originalUsers);
-      //console.error("Failed to update user status:", error);
+      console.error("Failed to update user status:", error); // More detailed logging
       toast({
         title: "Error",
         description: `Failed to update user status: ${

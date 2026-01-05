@@ -26,8 +26,12 @@ export async function toggleUserActiveStatus(
   //console.log("Request Body:", JSON.stringify(requestData));
 
   try {
+    const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/users/toggle-active/`;
+    console.log("TOGGLE API: URL -", apiUrl);
+    console.log("TOGGLE API: Request Body -", requestData);
+
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/users/toggle-active/`,
+      apiUrl,
       {
         method: "POST",
         headers: {
@@ -38,22 +42,24 @@ export async function toggleUserActiveStatus(
       }
     );
 
-    // console.log("API Response Status:", response.status);
-    // console.log("API Response OK:", response.ok);
+    console.log("TOGGLE API: Response Status -", response.status);
+    console.log("TOGGLE API: Response OK -", response.ok);
 
     if (!response.ok) {
       const errorData = await response.json();
-      //console.log("API Error Response:", errorData);
+      console.error("TOGGLE API: Error Response Data -", errorData);
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || errorData.detail || `HTTP error! status: ${response.status}`
       );
+    } else {
+      const successData = await response.json();
+      console.log("TOGGLE API: Success Response Data -", successData);
     }
 
     //console.log("=== TOGGLE API SUCCESS ===");
     // No need to return anything specific, just resolve if successful
   } catch (error: any) {
-    // console.error("=== TOGGLE API ERROR ===");
-    // console.error("Failed to toggle user status:", error);
+    console.error("TOGGLE API: Caught Error -", error);
     throw new Error(
       `Failed to toggle user status: ${error.message || "Unknown error"}`
     );

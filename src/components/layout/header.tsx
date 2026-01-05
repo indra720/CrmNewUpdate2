@@ -51,7 +51,7 @@ function getRoleFromPathname(pathname: string) {
   return '';
 }
 
-export function Header({ setSidebarOpen }: { setSidebarOpen?: (open: boolean) => void }) {
+export function Header({ setSidebarOpen, isCollapsed }: { setSidebarOpen?: (open: boolean) => void, isCollapsed?: boolean }) {
   const pathname = usePathname();
   const headerTitle = useMemo(() => getTitleFromPathname(pathname), [pathname]);
   const role = useMemo(() => getRoleFromPathname(pathname), [pathname]);

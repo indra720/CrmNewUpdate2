@@ -230,55 +230,54 @@ export function SuperAdminSidebar({ isSidebarOpen, setSidebarOpen, isCollapsed, 
     </>
   );
 
-  const SidebarFooter = ({ isCollapsed, setIsCollapsed }: { isCollapsed: boolean, setIsCollapsed: (collapsed: boolean) => void }) => {
-    return (
-      <div className={cn("p-4 border-t border-sidebar-border", isCollapsed ? "flex flex-col items-center" : "")}>
-          {isCollapsed && (
-             <Button onClick={() => setIsCollapsed(false)} variant="ghost" className="hidden lg:flex justify-center w-full mb-2 text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground">
-              <PanelRight size={24} />
-              <span className="sr-only">Expand Sidebar</span>
-            </Button>
-          )}
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <div className="flex items-center cursor-pointer group w-full focus-visible:ring-0 focus-visible:ring-offset-0">
-                <Avatar className="h-10 w-10 font-bold">
-                  <AvatarFallback className='bg-orange-500 text-primary-foreground'>{userName ? userName.charAt(0).toUpperCase() : 'S'}</AvatarFallback>
-                </Avatar>
-                {!isCollapsed && (
-                  <div className="ml-3">
-                    <p className="text-sm font-medium">{userName || 'Super Admin'}</p>
-                    <p className="text-xs text-muted-foreground group-hover:text-sidebar-foreground/80">{userEmail || 'super@nexus.com'}</p>
-                  </div>
-                )}
-              </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56 mb-2 ml-2 bg-popover border-border text-popover-foreground" align="end" forceMount>
-                 <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{userName || 'Super Admin'}</p>
-                        <p className="text-xs leading-none text-muted-foreground">
-                        {userEmail || 'super@nexus.com'}
-                        </p>
+    const SidebarFooter = ({ isCollapsed, setIsCollapsed }: { isCollapsed: boolean, setIsCollapsed: (collapsed: boolean) => void }) => {
+      return (
+        <div className={cn("p-4 border-t border-sidebar-border", isCollapsed ? "flex flex-col items-center" : "")}>
+            {isCollapsed && (
+               <Button onClick={() => setIsCollapsed(false)} variant="ghost" className="hidden lg:flex justify-center w-full mb-2 text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground">
+                <PanelRight size={24} />
+                <span className="sr-only">Expand Sidebar</span>
+              </Button>
+            )}
+  
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="flex items-center cursor-pointer group w-full focus-visible:ring-0 focus-visible:ring-offset-0">
+                  <Avatar className="h-10 w-10 font-bold">
+                    <AvatarFallback className='bg-orange-500 text-primary-foreground'>{userName ? userName.charAt(0).toUpperCase() : 'S'}</AvatarFallback>
+                  </Avatar>
+                  {!isCollapsed && (
+                    <div className="ml-3">
+                      <p className="text-sm font-medium">{userName || 'Super Admin'}</p>
+                      <p className="text-xs text-muted-foreground group-hover:text-sidebar-foreground/80">{userEmail || 'super@nexus.com'}</p>
                     </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator/>
-                <DropdownMenuItem>
-                    <Link href="/superadmin/profile" className="flex items-center w-full">
-                        <span>Profile</span>
-                    </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogout} className="text-destructive">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-      </div>
-    );
-  };
-
+                  )}
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56 mb-2 ml-2 bg-popover border-border text-popover-foreground" align="end" forceMount>
+                   <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-1">
+                          <p className="text-sm font-medium leading-none">{userName || 'Super Admin'}</p>
+                          <p className="text-xs leading-none text-muted-foreground">
+                          {userEmail || 'super@nexus.com'}
+                          </p>
+                      </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator/>
+                  <DropdownMenuItem>
+                      <Link href="/superadmin/profile" className="flex items-center w-full">
+                          <span>Profile</span>
+                      </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                  </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
+      );
+    };
 
   return (
     <>
@@ -298,7 +297,7 @@ export function SuperAdminSidebar({ isSidebarOpen, setSidebarOpen, isCollapsed, 
 
       {/* Desktop Sidebar */}
       <aside className={cn(
-          "hidden lg:fixed left-0 top-0 h-full bg-sidebar text-sidebar-foreground lg:flex flex-col border-r border-sidebar-border transition-all duration-300 ease-in-out",
+          "hidden lg:fixed left-0 top-0 h-full bg-sidebar text-sidebar-foreground lg:flex flex-col border-r border-sidebar-border transition-all duration-300 ease-in-out z-40",
           isCollapsed ? "w-18" : "w-60"
         )}>
           <div className='flex flex-col h-full'>
