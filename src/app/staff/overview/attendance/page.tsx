@@ -417,6 +417,10 @@ export default function Attendance() {
                 <div className="w-3 h-3 rounded-full bg-slate-300"></div>
                 <span className="text-xs text-slate-600">Weekend</span>
               </div>
+               <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+                <span className="text-xs text-slate-600">Half Day</span>
+              </div>
             </div>
 
             <div className="grid grid-cols-7 gap-2 mb-3">
