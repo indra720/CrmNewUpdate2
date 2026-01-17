@@ -20,9 +20,11 @@ import {
   Phone,
   FileUp,
   DollarSign,
+  ListTodo,
 } from 'lucide-react';
 
 export const SIDENAV_ITEMS = [
+
 
   {
     title: 'User',
@@ -75,6 +77,18 @@ export const SIDENAV_ITEMS = [
     title: 'Time Sheet',
     path: '/admin/timesheet',
     icon: <Clock className="h-5 w-5" />,
+  },
+  {
+    title: 'Projects',
+    path: '/admin/project',
+    icon: <Presentation className="h-5 w-5" />,
+    submenu: true,
+    subMenuItems: [
+      { title: 'Dashboard', path: '/admin/project/dashboard' },
+      { title: 'Projects', path: '/admin/project/all' },
+      { title: 'Tasks', path: '/admin/project/tasks' },
+      { title: 'Team', path: '/admin/project/team' },
+    ],
   },
 ];
 
