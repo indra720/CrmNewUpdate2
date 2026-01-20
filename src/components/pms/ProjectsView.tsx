@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react';
-import { Filter, LayoutGrid, List } from 'lucide-react';
+import { Filter, LayoutGrid, List, FolderKanban, CheckSquare, Clock, ClipboardList, Search, ArrowDownWideNarrow, ArrowUpWideNarrow } from 'lucide-react';
 
 import { ProjectCard } from './ProjectCard';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,9 @@ import { mockProjects, mockProjectMembers } from '@/lib/mockData';
 import { ProjectStatus } from '@/types';
 import { cn } from '@/lib/utils';
 import { CreateProjectDialog } from '@/components/forms/CreateProjectDialog';
+import { StatsCard } from './StatsCard'; // Import StatsCard
+import { Input } from '@/components/ui/input'; // Import Input
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'; // Import Select components
 
 const statusFilters: { label: string; value: ProjectStatus | 'all' }[] = [
   { label: 'All', value: 'all' },
@@ -18,13 +21,62 @@ const statusFilters: { label: string; value: ProjectStatus | 'all' }[] = [
   { label: 'On Hold', value: 'on-hold' },
 ];
 
+type SortKey = 'name' | 'startDate' | 'endDate' | 'progress';
+type SortOrder = 'asc' | 'desc';
+
 export default function Projects() {
   const [activeFilter, setActiveFilter] = useState<ProjectStatus | 'all'>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [sortKey, setSortKey] = useState<SortKey>('name');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
-  const filteredProjects = activeFilter === 'all' 
-    ? mockProjects 
+  const filteredProjects = activeFilter === 'all'
+    ? mockProjects
     : mockProjects.filter(p => p.status === activeFilter);
+
+  const searchedProjects = filteredProjects.filter(project =>
+    project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    project.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    project.client.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const sortedProjects = [...searchedProjects].sort((a, b) => {
+    let compareA: any;
+    let compareB: any;
+
+    switch (sortKey) {
+      case 'name':
+        compareA = a.name.toLowerCase();
+        compareB = b.name.toLowerCase();
+        break;
+      case 'startDate':
+        compareA = new Date(a.startDate).getTime();
+        compareB = new Date(b.startDate).getTime();
+        break;
+      case 'endDate':
+        compareA = new Date(a.endDate).getTime();
+        compareB = new Date(b.endDate).getTime();
+        break;
+      case 'progress':
+        compareA = a.progress;
+        compareB = b.progress;
+        break;
+      default:
+        return 0;
+    }
+
+    if (compareA < compareB) return sortOrder === 'asc' ? -1 : 1;
+    if (compareA > compareB) return sortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+
+  // Project Stats for Quick Summary
+  const totalProjects = mockProjects.length;
+  const activeProjects = mockProjects.filter(p => p.status === 'active').length;
+  const completedProjects = mockProjects.filter(p => p.status === 'completed').length;
+  const plannedProjects = mockProjects.filter(p => p.status === 'planned').length;
 
   return (
     <>
@@ -40,40 +92,110 @@ export default function Projects() {
           <CreateProjectDialog />
         </div>
 
-        {/* Filters & View Toggle */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <Tabs value={activeFilter} onValueChange={(v) => setActiveFilter(v as ProjectStatus | 'all')}>
-            <div className="w-[300px] overflow-x-auto sm:w-full">
-              <TabsList className="bg-secondary/50  whitespace-nowrap">
-                {statusFilters.map((filter) => (
-                  <TabsTrigger 
-                    key={filter.value} 
-                    value={filter.value}
-                    className="data-[state=active]:bg-[#fa7516] flex-shrink-0 text-black"
-                  >
-                    {filter.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </div>
-          </Tabs>
+        {/* Project Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatsCard
+            title="Total Projects"
+            value={totalProjects}
+            icon={FolderKanban}
+            trend={0}
+          />
+          <StatsCard
+            title="Active Projects"
+            value={activeProjects}
+            icon={CheckSquare}
+            trend={5}
+          />
+          <StatsCard
+            title="Completed Projects"
+            value={completedProjects}
+            icon={Clock}
+            trend={2}
+          />
+          <StatsCard
+            title="Planned Projects"
+            value={plannedProjects}
+            icon={ClipboardList}
+            trend={-1}
+          />
+        </div>
 
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-2">
-              <Filter className="w-4 h-4" />
-              Filter
-            </Button>
+        {/* Filters, Search & View Toggle */}
+        <div className="flex flex-col gap-4"> {/* Always flex-col */}
+          {/* Top row: Filters (Tabs) */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4"> {/* Tabs and maybe the generic filter button */}
+            <Tabs value={activeFilter} onValueChange={(v) => setActiveFilter(v as ProjectStatus | 'all')}>
+              <div className="w-[300px] overflow-x-auto sm:w-full">
+                <TabsList className="bg-secondary/50  whitespace-nowrap">
+                  {statusFilters.map((filter) => (
+                    <TabsTrigger
+                      key={filter.value}
+                      value={filter.value}
+                      className="data-[state=active]:bg-[#fa7516] flex-shrink-0 text-black"
+                    >
+                      {filter.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
+            </Tabs>
+            {/* The generic Filter button is removed here as it's redundant with tabs */}
+          </div>
+
+          {/* Bottom row: Search, Sort & View Toggle */}
+          <div className="flex flex-row flex-wrap items-center justify-end gap-3 md:flex-nowrap md:gap-4"> {/* Increased gap for mobile, flex-nowrap for md+ */}
+            {/* Search Input */}
+            <div className="relative w-full min-w-[180px] sm:w-auto md:flex-grow"> {/* Allow search to grow on md+ */}
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search projects..."
+                className="pl-9 pr-4"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            {/* Sort Select and Sort Order Toggle Group */}
+            <div className="flex items-center gap-3"> {/* Increased gap for mobile here */}
+              {/* Sort Select */}
+              <Select value={sortKey} onValueChange={(value: SortKey) => setSortKey(value)}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Project Name</SelectItem>
+                  <SelectItem value="startDate">Start Date</SelectItem>
+                  <SelectItem value="endDate">End Date</SelectItem>
+                  <SelectItem value="progress">Progress</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Sort Order Toggle */}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              >
+                {sortOrder === 'asc' ? (
+                  <ArrowUpWideNarrow className="h-4 w-4" />
+                ) : (
+                  <ArrowDownWideNarrow className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+
+            {/* View Toggle */}
             <div className="flex items-center border border-border rounded-lg p-1 bg-secondary/50">
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className={cn("h-8 w-8", viewMode === 'grid' && "bg-card shadow-sm")}
                 onClick={() => setViewMode('grid')}
               >
                 <LayoutGrid className="w-4 h-4" />
               </Button>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="icon"
                 className={cn("h-8 w-8", viewMode === 'list' && "bg-card shadow-sm")}
                 onClick={() => setViewMode('list')}
@@ -86,20 +208,20 @@ export default function Projects() {
 
         {/* Projects Grid/List */}
         <div className={cn(
-          viewMode === 'grid' 
-            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" 
+          viewMode === 'grid'
+            ? "grid grid-cols-1 lg:grid-cols-2  gap-4"
             : "flex flex-col gap-3"
         )}>
-          {filteredProjects.map((project) => (
-            <ProjectCard 
-              key={project.id} 
+          {sortedProjects.map((project) => (
+            <ProjectCard
+              key={project.id}
               project={project}
               members={mockProjectMembers.filter(m => m.projectId === project.id)}
             />
           ))}
         </div>
 
-        {filteredProjects.length === 0 && (
+        {sortedProjects.length === 0 && (
           <div className="text-center py-12">
             <p className="text-muted-foreground">No projects found</p>
           </div>
