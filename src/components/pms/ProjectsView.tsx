@@ -1,17 +1,17 @@
 'use client'
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Filter, LayoutGrid, List, FolderKanban, CheckSquare, Clock, ClipboardList, Search, ArrowDownWideNarrow, ArrowUpWideNarrow } from 'lucide-react';
 
 import { ProjectCard } from './ProjectCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { mockProjects, mockProjectMembers } from '@/lib/mockData';
+import { mockProjects, mockProjectMembers, Project } from '@/lib/mockData';
 import { ProjectStatus } from '@/types';
 import { cn } from '@/lib/utils';
 import { CreateProjectDialog } from '@/components/forms/CreateProjectDialog';
-import { StatsCard } from './StatsCard'; // Import StatsCard
-import { Input } from '@/components/ui/input'; // Import Input
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'; // Import Select components
+import { StatsCard } from './StatsCard';
+import { Input } from '@/components/ui/input';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 const statusFilters: { label: string; value: ProjectStatus | 'all' }[] = [
   { label: 'All', value: 'all' },
@@ -25,15 +25,34 @@ type SortKey = 'name' | 'startDate' | 'endDate' | 'progress';
 type SortOrder = 'asc' | 'desc';
 
 export default function Projects() {
+  const [userProjects, setUserProjects] = useState<Project[]>([]);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<ProjectStatus | 'all'>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
+  useEffect(() => {
+    const role = localStorage.getItem('userRole');
+    const userId = localStorage.getItem('userId');
+    setCurrentUserRole(role);
+
+    if (role === 'admin' || role === 'superadmin' || role === 'team-leader') {
+      setUserProjects(mockProjects);
+    } else if (role === 'staff' && userId) {
+      const staffProjectIds = mockProjectMembers
+        .filter(member => member.memberId === userId)
+        .map(member => member.projectId);
+      
+      const filtered = mockProjects.filter(project => staffProjectIds.includes(project.id));
+      setUserProjects(filtered);
+    }
+  }, []);
+
   const filteredProjects = activeFilter === 'all'
-    ? mockProjects
-    : mockProjects.filter(p => p.status === activeFilter);
+    ? userProjects
+    : userProjects.filter(p => p.status === activeFilter);
 
   const searchedProjects = filteredProjects.filter(project =>
     project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -73,10 +92,10 @@ export default function Projects() {
 
 
   // Project Stats for Quick Summary
-  const totalProjects = mockProjects.length;
-  const activeProjects = mockProjects.filter(p => p.status === 'active').length;
-  const completedProjects = mockProjects.filter(p => p.status === 'completed').length;
-  const plannedProjects = mockProjects.filter(p => p.status === 'planned').length;
+  const totalProjects = userProjects.length;
+  const activeProjects = userProjects.filter(p => p.status === 'active').length;
+  const completedProjects = userProjects.filter(p => p.status === 'completed').length;
+  const plannedProjects = userProjects.filter(p => p.status === 'planned').length;
 
   return (
     <>
@@ -86,10 +105,10 @@ export default function Projects() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">Projects</h1>
             <p className="text-muted-foreground mt-1">
-              Manage and track all your projects
+              {currentUserRole === 'staff' ? 'Projects assigned to you' : 'Manage and track all your projects'}
             </p>
           </div>
-          <CreateProjectDialog />
+          {(currentUserRole === 'admin' || currentUserRole === 'superadmin') && <CreateProjectDialog />}
         </div>
 
         {/* Project Stats Grid */}
@@ -121,9 +140,8 @@ export default function Projects() {
         </div>
 
         {/* Filters, Search & View Toggle */}
-        <div className="flex flex-col gap-4"> {/* Always flex-col */}
-          {/* Top row: Filters (Tabs) */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4"> {/* Tabs and maybe the generic filter button */}
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <Tabs value={activeFilter} onValueChange={(v) => setActiveFilter(v as ProjectStatus | 'all')}>
               <div className="w-[300px] overflow-x-auto sm:w-full">
                 <TabsList className="bg-secondary/50  whitespace-nowrap">
@@ -139,13 +157,10 @@ export default function Projects() {
                 </TabsList>
               </div>
             </Tabs>
-            {/* The generic Filter button is removed here as it's redundant with tabs */}
           </div>
 
-          {/* Bottom row: Search, Sort & View Toggle */}
-          <div className="flex flex-row flex-wrap items-center justify-end gap-3 md:flex-nowrap md:gap-4"> {/* Increased gap for mobile, flex-nowrap for md+ */}
-            {/* Search Input */}
-            <div className="relative w-full min-w-[180px] sm:w-auto md:flex-grow"> {/* Allow search to grow on md+ */}
+          <div className="flex flex-row flex-wrap items-center justify-end gap-3 md:flex-nowrap md:gap-4">
+            <div className="relative w-full min-w-[180px] sm:w-auto md:flex-grow">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search projects..."
@@ -155,9 +170,7 @@ export default function Projects() {
               />
             </div>
 
-            {/* Sort Select and Sort Order Toggle Group */}
-            <div className="flex items-center gap-3"> {/* Increased gap for mobile here */}
-              {/* Sort Select */}
+            <div className="flex items-center gap-3">
               <Select value={sortKey} onValueChange={(value: SortKey) => setSortKey(value)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Sort by" />
@@ -170,7 +183,6 @@ export default function Projects() {
                 </SelectContent>
               </Select>
 
-              {/* Sort Order Toggle */}
               <Button
                 variant="outline"
                 size="icon"
@@ -184,7 +196,6 @@ export default function Projects() {
               </Button>
             </div>
 
-            {/* View Toggle */}
             <div className="flex items-center border border-border rounded-lg p-1 bg-secondary/50">
               <Button
                 variant="ghost"
@@ -223,7 +234,7 @@ export default function Projects() {
 
         {sortedProjects.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">No projects found</p>
+            <p className="text-muted-foreground">No projects found for your account.</p>
           </div>
         )}
       </div>

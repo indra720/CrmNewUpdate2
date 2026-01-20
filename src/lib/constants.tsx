@@ -179,6 +179,16 @@ export const STAFF_SIDENAV_ITEMS = [
         path: '/staff/dashboard',
         icon: <LayoutGrid className="h-5 w-5" />,
     },
+    {
+        title: 'Projects',
+        path: '/staff/projects',
+        icon: <Presentation className="h-5 w-5" />,
+        submenu: true,
+        subMenuItems: [
+            { title: 'My Projects', path: '/staff/projects' },
+            { title: 'My Tasks', path: '/staff/tasks' },
+        ],
+    },
         {
         title: 'Productivity',
         path: '/staff/productivity',
@@ -230,6 +240,18 @@ export const TEAM_LEADER_SIDENAV_ITEMS = [
         title: 'Dashboard',
         path: '/team-leader',
         icon: <LayoutGrid className="h-5 w-5" />,
+    },
+    {
+        title: 'Projects',
+        path: '/team-leader/project',
+        icon: <Presentation className="h-5 w-5" />,
+        submenu: true,
+        subMenuItems: [
+          { title: 'Dashboard', path: '/team-leader/project/dashboard' },
+          { title: 'Projects', path: '/team-leader/project/all' },
+          { title: 'Tasks', path: '/team-leader/project/tasks' },
+          { title: 'Team', path: '/team-leader/project/team' },
+        ],
     },
         {
         title: 'Productivity',

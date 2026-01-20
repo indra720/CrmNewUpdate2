@@ -8,9 +8,10 @@ type AnimatedCounterProps = {
   to: number;
   prefix?: string;
   postfix?: string;
+  className?: string;
 };
 
-export function AnimatedCounter({ from, to, prefix, postfix }: AnimatedCounterProps) {
+export function AnimatedCounter({ from, to, prefix, postfix, className }: AnimatedCounterProps) {
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true });
   const motionValue = useMotionValue(from);
@@ -36,5 +37,5 @@ export function AnimatedCounter({ from, to, prefix, postfix }: AnimatedCounterPr
     return unsubscribe;
   }, [springValue, prefix, postfix]);
 
-  return <span ref={ref} />;
+  return <span ref={ref} className={className} />;
 }
