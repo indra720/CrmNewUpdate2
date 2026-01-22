@@ -1,9 +1,10 @@
 'use client';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, Search, Users, LayoutGrid, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
 import { mockTeamMembers, TeamMember } from '@/lib/mock-team-members';
+import { mockProjects, mockProjectMembers, mockTasks } from '@/lib/mockData'; // Added mockProjects, mockProjectMembers, mockTasks
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -44,46 +45,85 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, description }) 
 
 
 const TeamView = () => {
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(mockTeamMembers);
+  const [allTeamMembers, setAllTeamMembers] = useState<TeamMember[]>([]); // Renamed to avoid conflict, initialized as empty
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [dialogs, setDialogs] = useState({ profile: false, edit: false, remove: false });
 
+  // Fetch role and ID, then filter members
+  useEffect(() => {
+    const role = localStorage.getItem('userRole');
+    const userId = localStorage.getItem('userId');
+    setCurrentUserRole(role);
+    setCurrentUserId(userId);
+
+    let membersToSet: TeamMember[] = [];
+
+    if (role === 'admin' || role === 'superadmin') {
+      membersToSet = mockTeamMembers;
+    } else if (role === 'team-leader' && userId) {
+      // Find projects the team leader is part of
+      const teamLeaderProjectIds = mockProjectMembers
+        .filter(member => member.id === userId)
+        .map(member => member.projectId);
+
+      // Find all unique member IDs associated with these projects
+      const uniqueRelevantMemberIds = new Set<string>();
+      mockProjectMembers.forEach(member => {
+        if (teamLeaderProjectIds.includes(member.projectId)) {
+          uniqueRelevantMemberIds.add(member.id);
+        }
+      });
+      // Filter mockTeamMembers to include only relevant members
+      membersToSet = mockTeamMembers.filter(member => uniqueRelevantMemberIds.has(member.id));
+    }
+    // For other roles or if not logged in, membersToSet remains empty
+
+    setAllTeamMembers(membersToSet);
+  }, []); // Empty dependency array means this effect runs once on mount.
+
 
   const filteredMembers = useMemo(() => {
-    return teamMembers.filter(member =>
+    // Filter the `allTeamMembers` state
+    return allTeamMembers.filter(member =>
       member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       member.role.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [teamMembers, searchTerm]);
+  }, [allTeamMembers, searchTerm]); // Dependency on allTeamMembers
 
-  // Derived metrics for the overview cards
-  const totalMembers = teamMembers.length;
+  // Derived metrics for the overview cards - now based on filteredMembers
+  const totalMembers = filteredMembers.length;
   const activeProjects = useMemo(() => {
     const projectSet = new Set<string>();
-    teamMembers.forEach(member => member.projects.forEach(p => projectSet.add(p)));
+    filteredMembers.forEach(member => member.projects.forEach(p => projectSet.add(p)));
     return projectSet.size;
-  }, [teamMembers]);
+  }, [filteredMembers]);
   const totalTasksInProgress = useMemo(() => {
-    return teamMembers.reduce((sum, member) => {
-      const inProgressCount = member.tasks.filter(t => t.status === 'In Progress').length;
+    return filteredMembers.reduce((sum, member) => {
+      // Assuming mockTasks is available globally or passed down if needed for accurate task status
+      const inProgressCount = mockTasks.filter(t => 
+        t.assigneeId === member.id && t.status === 'in_progress'
+      ).length;
       return sum + inProgressCount;
     }, 0);
-  }, [teamMembers]);
+  }, [filteredMembers]);
   // Placeholder: In a real app, this would come from actual task data
   const completedTasksLast7Days = Math.floor(Math.random() * 50) + 10; 
 
-  const handleAddMember = (newMemberData: Omit<TeamMember, 'id' | 'projects' | 'tasksAssigned' | 'lastActivity'>) => {
+  const handleAddMember = (newMemberData: Omit<TeamMember, 'id' | 'projects' | 'tasks' | 'lastActivity' | 'tasksAssigned'>) => {
     const newMember: TeamMember = {
       id: `MEMBER-${Date.now()}`, // Unique ID
       ...newMemberData,
       projects: [], // Initially no projects
+      tasks: [], // Initially no tasks
       tasksAssigned: 0, // Initially no tasks
       lastActivity: new Date(),
     };
-    setTeamMembers(prev => [...prev, newMember]);
+    setAllTeamMembers(prev => [...prev, newMember]); // Update allTeamMembers
   };
 
   const openDialog = (type: 'profile' | 'edit' | 'remove', member: TeamMember) => {
@@ -97,13 +137,13 @@ const TeamView = () => {
   };
 
   const handleUpdateMember = (updatedMember: TeamMember) => {
-    setTeamMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
+    setAllTeamMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m)); // Update allTeamMembers
     closeDialog('edit');
   };
 
   const handleConfirmRemove = () => {
     if (selectedMember) {
-      setTeamMembers(prev => prev.filter(m => m.id !== selectedMember.id));
+      setAllTeamMembers(prev => prev.filter(m => m.id !== selectedMember.id)); // Update allTeamMembers
     }
     closeDialog('remove');
   };
@@ -117,10 +157,13 @@ const TeamView = () => {
           <h1 className="text-2xl font-bold tracking-tight">Team Management</h1>
           <p className="text-muted-foreground">Manage your project team members.</p>
         </div>
-        <Button size="sm" className="gap-2" onClick={() => setIsAddMemberDialogOpen(true)}>
-          <Plus className="w-4 h-4" />
-          Add Member
-        </Button>
+        {/* Only Admin and Superadmin can add members */}
+        {(currentUserRole === 'admin' || currentUserRole === 'superadmin') && (
+            <Button size="sm" className="gap-2" onClick={() => setIsAddMemberDialogOpen(true)}>
+            <Plus className="w-4 h-4" />
+            Add Member
+            </Button>
+        )}
       </div>
 
       {/* Team Overview Metrics */}

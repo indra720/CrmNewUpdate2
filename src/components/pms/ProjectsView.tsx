@@ -5,8 +5,8 @@ import { Filter, LayoutGrid, List, FolderKanban, CheckSquare, Clock, ClipboardLi
 import { ProjectCard } from './ProjectCard';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { mockProjects, mockProjectMembers, Project } from '@/lib/mockData';
-import { ProjectStatus } from '@/types';
+import { mockProjects, mockProjectMembers } from '@/lib/mockData'; // Project import removed, now from types
+import { Project, ProjectStatus } from '@/types'; // Project type imported from here
 import { cn } from '@/lib/utils';
 import { CreateProjectDialog } from '@/components/forms/CreateProjectDialog';
 import { StatsCard } from './StatsCard';
@@ -27,6 +27,7 @@ type SortOrder = 'asc' | 'desc';
 export default function Projects() {
   const [userProjects, setUserProjects] = useState<Project[]>([]);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null); // Added state for userId
   const [activeFilter, setActiveFilter] = useState<ProjectStatus | 'all'>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -37,18 +38,31 @@ export default function Projects() {
     const role = localStorage.getItem('userRole');
     const userId = localStorage.getItem('userId');
     setCurrentUserRole(role);
+    setCurrentUserId(userId); // Set userId
 
-    if (role === 'admin' || role === 'superadmin' || role === 'team-leader') {
-      setUserProjects(mockProjects);
-    } else if (role === 'staff' && userId) {
-      const staffProjectIds = mockProjectMembers
-        .filter(member => member.memberId === userId)
+    let projectsToSet: Project[] = [];
+
+    if (role === 'admin' || role === 'superadmin') {
+      // Admins and Superadmins see all projects
+      projectsToSet = mockProjects as Project[];
+    } else if (role === 'team-leader' && userId) {
+      // Team Leaders see projects they are assigned to
+      const teamLeaderProjectIds = mockProjectMembers
+        .filter(member => member.id === userId) // Assuming userId is the member ID
         .map(member => member.projectId);
       
-      const filtered = mockProjects.filter(project => staffProjectIds.includes(project.id));
-      setUserProjects(filtered);
+      projectsToSet = mockProjects.filter(project => teamLeaderProjectIds.includes(project.id)) as Project[];
+    } else if (role === 'staff' && userId) {
+      // Staff see projects they are assigned to
+      const staffProjectIds = mockProjectMembers
+        .filter(member => member.id === userId)
+        .map(member => member.projectId);
+      
+      projectsToSet = mockProjects.filter(project => staffProjectIds.includes(project.id)) as Project[];
     }
-  }, []);
+
+    setUserProjects(projectsToSet);
+  }, []); // Dependency array ensures this runs once, or when role/userId changes (though localStorage doesn't trigger rerenders)
 
   const filteredProjects = activeFilter === 'all'
     ? userProjects
@@ -108,6 +122,7 @@ export default function Projects() {
               {currentUserRole === 'staff' ? 'Projects assigned to you' : 'Manage and track all your projects'}
             </p>
           </div>
+          {/* Conditional rendering for CreateProjectDialog - Only for Admin/Superadmin */}
           {(currentUserRole === 'admin' || currentUserRole === 'superadmin') && <CreateProjectDialog />}
         </div>
 
@@ -127,10 +142,8 @@ export default function Projects() {
           />
           <StatsCard
             title="Completed Projects"
-            value={completedProjects}
             icon={Clock}
-            trend={2}
-          />
+            trend={2} value={undefined}          />
           <StatsCard
             title="Planned Projects"
             value={plannedProjects}
@@ -170,31 +183,29 @@ export default function Projects() {
               />
             </div>
 
-            <div className="flex items-center gap-3">
-              <Select value={sortKey} onValueChange={(value: SortKey) => setSortKey(value)}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name">Project Name</SelectItem>
-                  <SelectItem value="startDate">Start Date</SelectItem>
-                  <SelectItem value="endDate">End Date</SelectItem>
-                  <SelectItem value="progress">Progress</SelectItem>
-                </SelectContent>
-              </Select>
+            <Select value={sortKey} onValueChange={(value: SortKey) => setSortKey(value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Project Name</SelectItem>
+                <SelectItem value="startDate">Start Date</SelectItem>
+                <SelectItem value="endDate">End Date</SelectItem>
+                <SelectItem value="progress">Progress</SelectItem>
+              </SelectContent>
+            </Select>
 
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              >
-                {sortOrder === 'asc' ? (
-                  <ArrowUpWideNarrow className="h-4 w-4" />
-                ) : (
-                  <ArrowDownWideNarrow className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+            >
+              {sortOrder === 'asc' ? (
+                <ArrowUpWideNarrow className="h-4 w-4" />
+              ) : (
+                <ArrowDownWideNarrow className="h-4 w-4" />
+              )}
+            </Button>
 
             <div className="flex items-center border border-border rounded-lg p-1 bg-secondary/50">
               <Button

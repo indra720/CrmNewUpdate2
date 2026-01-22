@@ -58,7 +58,11 @@ const assignees = [
   { id: 'user-3', name: 'Peter Jones' },
 ];
 
-export function AddProjectTaskDialog() {
+interface AddProjectTaskDialogProps {
+  onTaskAdd: (data: AddTaskFormValues) => void;
+}
+
+export function AddProjectTaskDialog({ onTaskAdd }: AddProjectTaskDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
 
@@ -74,7 +78,7 @@ export function AddProjectTaskDialog() {
   });
 
   const onSubmit = (data: AddTaskFormValues) => {
-    console.log('Task added:', data);
+    onTaskAdd(data);
 
     toast({
       title: 'Task Created',

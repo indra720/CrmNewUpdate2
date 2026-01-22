@@ -7,7 +7,7 @@ import { TaskRow } from './TaskRow';
 import { mockProjects, mockTasks, mockProjectMembers } from '@/lib/mockData';
 import { PieChart as RechartsPieChart, Pie, Sector, ResponsiveContainer, Legend, Cell } from 'recharts';
 import { useIsMobile } from '@/hooks/use-mobile';
-import React from 'react';
+import React, { useState, useEffect } from 'react'; // Import useState and useEffect
 
 const renderActiveShapeForDesktop = (props: any) => {
   const RADIAN = Math.PI / 180;
@@ -105,8 +105,13 @@ const renderActiveShapeForMobile = (props: any) => {
 
 
 export const PmsDashboard = () => {
-  const recentProjects = mockProjects.slice(0, 4);
-  const recentTasks = mockTasks.filter(t => t.status !== 'done').slice(0, 5);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCurrentUserRole(localStorage.getItem('userRole'));
+    setCurrentUserId(localStorage.getItem('userId'));
+  }, []);
 
   const [activeIndex, setActiveIndex] = React.useState(0);
   const isMobile = useIsMobile();
@@ -115,15 +120,62 @@ export const PmsDashboard = () => {
     setActiveIndex(index);
   };
 
+  // --- Role-based data filtering ---
+  let projectsToDisplay = [];
+  let tasksToDisplay = [];
+  let membersToDisplay = [];
+
+  if (currentUserRole === 'admin' || currentUserRole === 'superadmin') {
+    projectsToDisplay = mockProjects;
+    tasksToDisplay = mockTasks;
+    membersToDisplay = mockProjectMembers;
+  } else if (currentUserRole === 'team-leader' && currentUserId) {
+    // For demonstration: Filter projects where the team leader is associated with "Global Tech Inc." client.
+    // In a real application, this would involve more sophisticated filtering based on backend data
+    // e.g., projects where the team leader is explicitly assigned, or whose team members are on the project.
+    
+    // First, find all projects where the current Team Leader is a member
+    const teamLeaderProjectIds = mockProjectMembers
+      .filter(member => member.id === currentUserId) // Assuming currentUserId is the member ID
+      .map(member => member.projectId);
+    
+    // Now filter projects to include only those relevant to the team leader
+    projectsToDisplay = mockProjects.filter(project => teamLeaderProjectIds.includes(project.id));
+
+    // Filter tasks that belong to these projects
+    const relevantTaskProjectIds = projectsToDisplay.map(p => p.id);
+    tasksToDisplay = mockTasks.filter(task => relevantTaskProjectIds.includes(task.projectId));
+
+    // Filter members that are part of these projects
+    const relevantMemberProjectIds = projectsToDisplay.map(p => p.id);
+    const relevantMemberIds = mockProjectMembers
+        .filter(member => relevantMemberProjectIds.includes(member.projectId))
+        .map(member => member.id);
+
+    membersToDisplay = mockProjectMembers.filter(member => relevantMemberIds.includes(member.id));
+
+
+  } else {
+    // Default or loading state if role is not determined or unauthorized
+    projectsToDisplay = [];
+    tasksToDisplay = [];
+    membersToDisplay = [];
+  }
+  // --- End Role-based data filtering ---
+
+
+  const recentProjects = projectsToDisplay.slice(0, 4);
+  const recentTasks = tasksToDisplay.filter(t => t.status !== 'done').slice(0, 5);
+
   const stats = {
-    totalProjects: mockProjects.length,
-    activeTasks: mockTasks.filter(t => t.status === 'in_progress').length,
-    completedTasks: mockTasks.filter(t => t.status === 'done').length,
-    teamMembers: 4,
+    totalProjects: projectsToDisplay.length,
+    activeTasks: tasksToDisplay.filter(t => t.status === 'in_progress').length,
+    completedTasks: tasksToDisplay.filter(t => t.status === 'done').length,
+    teamMembers: membersToDisplay.length, // Display count of relevant members
   };
 
   const taskStatusData = Object.entries(
-    mockTasks.reduce((acc, task) => {
+    tasksToDisplay.reduce((acc, task) => {
       acc[task.status] = (acc[task.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
@@ -136,14 +188,14 @@ export const PmsDashboard = () => {
   const sevenDaysFromNow = new Date(today);
   sevenDaysFromNow.setDate(today.getDate() + 7);
 
-  const upcomingTasks = mockTasks.filter(task => {
+  const upcomingTasks = tasksToDisplay.filter(task => {
     if (task.status === 'done' || !task.deadline) return false;
     const deadlineDate = new Date(task.deadline);
     return deadlineDate >= today && deadlineDate <= sevenDaysFromNow;
   });
 
-  const teamWorkloadData = mockProjectMembers.map(member => {
-    const assignedTasks = mockTasks.filter(task =>
+  const teamWorkloadData = membersToDisplay.map(member => {
+    const assignedTasks = tasksToDisplay.filter(task => // Filter from tasksToDisplay
       task.assigneeId === member.id && task.status !== 'done'
     ).length;
     return {
@@ -176,6 +228,14 @@ export const PmsDashboard = () => {
 
   
 
+  // Show a loading state or nothing if role/ID is not yet determined
+  if (!currentUserRole || !currentUserId) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px] text-muted-foreground">
+        Loading dashboard data...
+      </div>
+    );
+  }
 
 
   return (
@@ -222,16 +282,16 @@ export const PmsDashboard = () => {
         <section className="lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground">Recent Projects</h2>
-            <a href="/admin/project/all" className="text-sm text-white hover:underline bg-[#fa7516] p-2 rounded-md">
+            <a href={`/${currentUserRole}/project/all`} className="text-sm text-white hover:underline bg-[#fa7516] p-2 rounded-md">
               View all
             </a>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {recentProjects.slice(0, 4).map((project) => (
+            {recentProjects.map((project) => (
               <ProjectCard
                 key={project.id}
                 project={project}
-                members={mockProjectMembers.filter(m => m.projectId === project.id)}
+                members={mockProjectMembers.filter(m => m.projectId === project.id)} // This will need refinement for team leader view
               />
             ))}
           </div>
@@ -241,7 +301,7 @@ export const PmsDashboard = () => {
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground">Active Tasks</h2>
-            <a href="/admin/tasks" className="text-sm text-white hover:underline bg-[#fa7516] p-2 rounded-md">
+            <a href={`/${currentUserRole}/tasks`} className="text-sm text-white hover:underline bg-[#fa7516] p-2 rounded-md">
               View all
             </a>
           </div>
@@ -296,33 +356,6 @@ export const PmsDashboard = () => {
           </div>
         </section>
 
-        {/* Upcoming Deadlines - New Compact Display */}
-        {/* <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground">Upcoming Deadlines</h2>
-          </div>
-          <div className="bg-card rounded-xl border border-border">
-            {upcomingTasks.length > 0 ? (
-              <ul className="divide-y divide-border">
-                {upcomingTasks.map((task) => {
-                  const deadlineDate = new Date(task.deadline);
-                  const daysLeft = formatDistanceToNowStrict(deadlineDate, { addSuffix: true });
-                  return (
-                    <li key={task.id} className="flex justify-between items-center p-4">
-                      <span className="font-medium text-foreground">{task.title}</span>
-                      <span className="text-sm text-muted-foreground">{daysLeft}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <div className="p-8 text-center text-muted-foreground">
-                No tasks due soon
-              </div>
-            )}
-          </div>
-        </section> */}
-
 
         <section>
           <div className="flex items-center justify-between mb-4">
@@ -376,29 +409,6 @@ export const PmsDashboard = () => {
           </div>
         </section>
 
-
-        {/* Team Workload */}
-        {/* <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground">Team Workload</h2>
-          </div>
-          <div className="bg-card rounded-xl border border-border">
-            {teamWorkloadData.length > 0 ? (
-              <ul className="divide-y divide-border">
-                {teamWorkloadData.map((member) => (
-                  <li key={member.name} className="flex justify-between items-center p-4">
-                    <span className="font-medium text-foreground">{member.name}</span>
-                    <span className="text-sm text-muted-foreground">{member.activeTasks} tasks</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="p-8 text-center text-muted-foreground">
-                No team workload data available
-              </div>
-            )}
-          </div>
-        </section> */}
 
         <section>
           <div className="flex items-center justify-between mb-4">
@@ -461,3 +471,5 @@ export const PmsDashboard = () => {
     </div>
   );
 }
+
+export default PmsDashboard;

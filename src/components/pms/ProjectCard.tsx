@@ -30,25 +30,15 @@ export const ProjectCard = ({ project, members = [] }) => {
 
   const styles = statusStyles[project.status] || statusStyles.planned;
 
-
-
-  const getProgressPercent = (completed, total) => {
-    if (!total || total === 0) return 0;
-    return Math.round((completed / total) * 100);
-  };
-
-  const getHealthStatus = (project) => {
+  const getHealthStatus = (project: any, currentProgress: number) => { // Added currentProgress parameter
     const today = new Date();
     const end = new Date(project.endDate);
-    const progress = getProgressPercent(
-      project.completedTasks,
-      project.totalTasks
-    );
 
     if (project.status === "completed") return "on-track";
 
-    if (today > end && progress < 100) return "delayed";
-    if (progress < 50) return "at-risk";
+    // For simplicity, let's say if the project is past its end date and progress isn't 100%
+    if (today > end && currentProgress < 100) return "delayed";
+    if (currentProgress < 50) return "at-risk"; // Projects less than 50% done are at risk
 
     return "on-track";
   };
@@ -59,17 +49,8 @@ export const ProjectCard = ({ project, members = [] }) => {
     "delayed": "bg-red-100 text-red-700 border-red-200",
   };
 
-
-  const progress = getProgressPercent(
-    project.completedTasks,
-    project.totalTasks
-  );
-
-  const health = getHealthStatus(project);
-
-
-
-
+  const progress = project.progress; // Directly use the progress from the project object
+  const health = getHealthStatus(project, progress); // Pass progress to health status calculation
 
   return (
     <Link href={`/admin/project/${project.slug}`} className="block h-full">

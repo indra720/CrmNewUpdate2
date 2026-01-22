@@ -38,12 +38,25 @@ const TaskView = () => {
     });
   }, [tasks, searchTerm, statusFilter, priorityFilter]);
 
-  const onTaskAdd = (newTask: Omit<Task, 'id' | 'assignee' | 'dueDate'>) => {
+  const onTaskAdd = (newTaskData: {
+    title: string;
+    description?: string;
+    assignee: string;
+    status: 'To Do' | 'In Progress' | 'Done';
+    priority: 'low' | 'medium' | 'high';
+    dueDate: Date;
+    tags?: string;
+  }) => {
+    const newTags = newTaskData.tags ? newTaskData.tags.split(',').map(tag => tag.trim()) : [];
     const fullTask: Task = {
-      ...newTask,
       id: `TASK-${Math.floor(Math.random() * 1000)}`,
-      assignee: { name: 'Current User' }, 
-      dueDate: new Date(),
+      title: newTaskData.title,
+      description: newTaskData.description,
+      status: newTaskData.status,
+      priority: newTaskData.priority,
+      assignee: { name: newTaskData.assignee }, 
+      dueDate: newTaskData.dueDate,
+      tags: newTags,
     };
     setTasks(prev => [fullTask, ...prev]);
   };
@@ -59,7 +72,7 @@ const TaskView = () => {
         </div>
         <div className="flex items-center gap-2">
           {/* We will pass the onTaskAdd function to the dialog later */}
-          <AddProjectTaskDialog />
+          <AddProjectTaskDialog onTaskAdd={onTaskAdd} />
         </div>
       </div>
 

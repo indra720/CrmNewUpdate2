@@ -86,6 +86,7 @@ export const SIDENAV_ITEMS = [
     subMenuItems: [
       { title: 'Dashboard', path: '/admin/project/dashboard' },
       { title: 'Projects', path: '/admin/project/all' },
+      { title: 'Sprints', path: '/admin/project/sprints' },
       { title: 'Tasks', path: '/admin/project/tasks' },
       { title: 'Team', path: '/admin/project/team' },
     ],

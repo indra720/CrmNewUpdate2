@@ -14,6 +14,7 @@ export interface TeamMember {
   role: 'Admin' | 'Team Lead' | 'Developer' | 'Designer' | 'QA' | 'Intern';
   projects: string[];
   tasks: Task[];
+  tasksAssigned: number;
   avatar?: string;
   lastActivity?: Date;
   skills?: string[];
@@ -60,6 +61,7 @@ export const mockTeamMembers: TeamMember[] = [
     role: 'Team Lead',
     projects: ['PROJ-001', 'PROJ-003'],
     tasks: allTasks.filter(t => ['TASK-01', 'TASK-02', 'TASK-03', 'TASK-04', 'TASK-05'].includes(t.id)),
+    tasksAssigned: 5,
     avatar: 'https://avatar.vercel.sh/alice.png',
     lastActivity: new Date(new Date().setHours(new Date().getHours() - 2)),
     skills: ['Leadership', 'React', 'Node.js'],
@@ -72,6 +74,7 @@ export const mockTeamMembers: TeamMember[] = [
     role: 'Developer',
     projects: ['PROJ-001', 'PROJ-002'],
     tasks: allTasks.filter(t => ['TASK-06', 'TASK-07', 'TASK-08', 'TASK-09', 'TASK-10', 'TASK-11', 'TASK-12', 'TASK-13'].includes(t.id)),
+    tasksAssigned: 8,
     avatar: 'https://avatar.vercel.sh/bob.png',
     lastActivity: new Date(new Date().setMinutes(new Date().getMinutes() - 30)),
     skills: ['React', 'TypeScript', 'AWS'],
@@ -84,6 +87,7 @@ export const mockTeamMembers: TeamMember[] = [
     role: 'Designer',
     projects: ['PROJ-001'],
     tasks: allTasks.filter(t => ['TASK-14', 'TASK-15', 'TASK-16'].includes(t.id)),
+    tasksAssigned: 3,
     avatar: 'https://avatar.vercel.sh/charlie.png',
     lastActivity: new Date(new Date().setDate(new Date().getDate() - 1)),
     skills: ['UI/UX', 'Figma', 'Sketch'],
@@ -96,6 +100,7 @@ export const mockTeamMembers: TeamMember[] = [
     role: 'QA',
     projects: ['PROJ-002', 'PROJ-003'],
     tasks: allTasks.filter(t => ['TASK-17', 'TASK-18', 'TASK-19', 'TASK-20', 'TASK-21', 'TASK-22'].includes(t.id)),
+    tasksAssigned: 6,
     avatar: 'https://avatar.vercel.sh/diana.png',
     lastActivity: new Date(new Date().setHours(new Date().getHours() - 5)),
     skills: ['Testing', 'Jira', 'Automation'],
@@ -108,6 +113,7 @@ export const mockTeamMembers: TeamMember[] = [
     role: 'Developer',
     projects: ['PROJ-002'],
     tasks: [],
+    tasksAssigned: 0,
     avatar: 'https://avatar.vercel.sh/eve.png',
     lastActivity: new Date(new Date().setHours(new Date().getHours() - 1)),
     skills: ['Backend', 'Python', 'Databases'],
@@ -120,6 +126,7 @@ export const mockTeamMembers: TeamMember[] = [
     role: 'Intern',
     projects: ['PROJ-003'],
     tasks: [],
+    tasksAssigned: 0,
     avatar: 'https://avatar.vercel.sh/frank.png',
     lastActivity: new Date(new Date().setMinutes(new Date().getMinutes() - 15)),
     skills: ['Learning', 'HTML', 'CSS'],
