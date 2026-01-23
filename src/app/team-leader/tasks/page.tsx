@@ -1,6 +1,6 @@
 'use client';
 
-import { TaskBoardView } from '@/components/pms/TaskBoardView';
+import TaskBoardView from '@/components/pms/TaskBoardView';
 import { useState, useEffect } from 'react';
 import { mockProjects, mockProjectMembers, mockTasks } from '@/lib/mockData';
 import { Task } from '@/lib/mock-tasks'; // Assuming Task type is needed here

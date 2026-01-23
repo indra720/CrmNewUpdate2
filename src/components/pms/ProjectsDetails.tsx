@@ -16,7 +16,7 @@ import { TaskRow } from './TaskRow'; // Import TaskRow
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
-import { TaskView } from './TaskView';
+import TaskDetailsDialog from './TaskDetailsDialog';
 import { formatDistanceToNowStrict } from 'date-fns'; // Import for date formatting
 
 
@@ -44,7 +44,18 @@ const getActivityIcon = (type: string) => {
 };
 
 
-// This defines the shape of the props the page will receive
+interface ProjectTask {
+  id: number;
+  projectId: number;
+  title: string;
+  status: string;
+  priority: string;
+  deadline: string;
+  assigneeId: string;
+  description?: string;
+  tags?: string[];
+}
+
 interface ProjectDetailsPageProps {
   params: {
     slug: string;
@@ -61,7 +72,35 @@ export default function ProjectDetails({ params }: ProjectDetailsPageProps) {
   }
 
   const members = mockProjectMembers.filter(m => m.projectId === project.id);
-  const projectTasks = mockTasks.filter(task => task.projectId === project.id) || []; // Filter tasks for this project, ensure default empty array
+  const [currentProjectTasks, setCurrentProjectTasks] = useState<ProjectTask[]>(() =>
+    mockTasks.filter(task => task.projectId === project.id)
+  );
+
+  const onTaskAdd = (newTaskData: {
+    title: string;
+    description?: string;
+    assignee: string;
+    status: 'To Do' | 'In Progress' | 'Done';
+    priority: 'low' | 'medium' | 'high';
+    dueDate: Date;
+    tags?: string;
+  }) => {
+    const statusMap: { [key: string]: string } = { 'To Do': 'todo', 'In Progress': 'in_progress', 'Done': 'done' };
+    const member = members.find(m => m.name === newTaskData.assignee);
+
+    const fullTask: ProjectTask = {
+        id: Math.floor(Math.random() * 100000), // number
+        projectId: project.id,
+        title: newTaskData.title,
+        status: statusMap[newTaskData.status] || 'todo', // mapped status
+        priority: newTaskData.priority,
+        deadline: newTaskData.dueDate.toISOString().split("T")[0], // string
+        assigneeId: member ? member.id : 'unassigned', // string
+        description: newTaskData.description,
+        tags: newTaskData.tags ? newTaskData.tags.split(',').map(tag => tag.trim()) : [],
+    };
+    setCurrentProjectTasks(prevTasks => [fullTask, ...prevTasks]);
+  };
   const projectActivities = mockActivities.filter(activity => activity.projectId === project.id); // Filter activities for this project
 
   const formatDate = (dateString: string) => {
@@ -72,8 +111,8 @@ export default function ProjectDetails({ params }: ProjectDetailsPageProps) {
     });
   };
 
-  const completedTasks = projectTasks.filter(t => t.status === 'done').length;
-  const totalTasks = projectTasks.length;
+  const completedTasks = currentProjectTasks.filter(t => t.status === 'Done').length;
+  const totalTasks = currentProjectTasks.length;
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : project.progress || 0;
 
   const [isTaskViewOpen, setIsTaskViewOpen] = useState(false);
@@ -84,11 +123,13 @@ export default function ProjectDetails({ params }: ProjectDetailsPageProps) {
     setIsTaskViewOpen(true);
   };
 
-  const handleTaskStatusChange = (taskId: number, newStatus: string) => {
-    // In a real app, you'd update your backend/state management here
-    console.log(`Task ${taskId} status changed to ${newStatus}`);
-    // For mock data, you might update mockTasks directly for immediate feedback
-    // but in this stateless component, it won't persist
+  const handleTaskStatusChange = (taskId: number, newStatus: 'To Do' | 'In Progress' | 'Done') => {
+    const statusMap: { [key: string]: string } = { 'To Do': 'todo', 'In Progress': 'in_progress', 'Done': 'done' };
+    setCurrentProjectTasks(prevTasks =>
+      prevTasks.map(task =>
+        task.id === taskId ? { ...task, status: statusMap[newStatus] } : task
+      )
+    );
   };
 
 
@@ -190,17 +231,17 @@ export default function ProjectDetails({ params }: ProjectDetailsPageProps) {
               <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 <ListTodo className="h-5 w-5 text-[#fa7516]" /> Tasks
               </h2>
-              <AddProjectTaskDialog />
+              <AddProjectTaskDialog onTaskAdd={onTaskAdd} />
             </div>
 
             <div className="bg-card rounded-xl border border-border">
-              {projectTasks.length > 0 ? (
-                projectTasks.map((task) => (
+              {currentProjectTasks.length > 0 ? (
+                currentProjectTasks.map((task) => (
                   <TaskRow 
                     key={task.id} 
                     task={task} 
                     onViewTask={() => handleViewTask(task)}
-                    onStatusChange={(newStatus) => handleTaskStatusChange(task.id, newStatus)}
+                    onStatusChange={(newStatus: 'To Do' | 'In Progress' | 'Done') => handleTaskStatusChange(task.id, newStatus)}
                   />
                 ))
               ) : (
@@ -238,7 +279,7 @@ export default function ProjectDetails({ params }: ProjectDetailsPageProps) {
                     </p>
                   </div>
                   <Badge variant="secondary">
-                    {mockTasks.filter(t => t.assigneeId === member.id && t.projectId === project.id && t.status !== 'done').length} Tasks
+                    {currentProjectTasks.filter(t => t.assigneeId === member.id && t.projectId === project.id && t.status !== 'Done').length} Tasks
                   </Badge>
                 </div>
               ))}
@@ -300,7 +341,7 @@ export default function ProjectDetails({ params }: ProjectDetailsPageProps) {
       </div>
 
       {selectedTask && (
-        <TaskView isOpen={isTaskViewOpen} onClose={() => setIsTaskViewOpen(false)} task={selectedTask} />
+        <TaskDetailsDialog isOpen={isTaskViewOpen} onOpenChange={setIsTaskViewOpen} task={selectedTask} />
       )}
     </div>
   );

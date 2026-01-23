@@ -1,6 +1,6 @@
 'use client';
 
-import { TaskBoardView } from '@/components/pms/TaskBoardView';
+import TaskBoardView from '@/components/pms/TaskBoardView';
 import { mockTasks } from '@/lib/mockData'; // Assuming mockTasks is available globally for superadmin
 import { Task } from '@/lib/mock-tasks'; // Assuming Task type is needed here
 import { useState } from 'react';
