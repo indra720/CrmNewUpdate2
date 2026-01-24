@@ -332,7 +332,7 @@ export default function AdminManagementPage() {
       setcardData(data);
       const fetchedUsers = data.users.map((user: any) => ({
         ...user,
-        self_user: { user_active: user.is_active }, // Assuming user.is_active is the field for active status
+        self_user: { user_active: user.user?.user_active }, // Correctly map from nested user object
       }));
       setUsers(fetchedUsers);
     } catch (err: any) {
@@ -557,10 +557,10 @@ export default function AdminManagementPage() {
     );
 
     try {
-      console.log(`Attempting to toggle user status:
-        User ID: ${id},
-        User Type: admin,
-        Is Active: ${isActive}`);
+      // console.log(`Attempting to toggle user status:
+      //   User ID: ${id},
+      //   User Type: admin,
+      //   Is Active: ${isActive}`);
       await toggleUserActiveStatus(id, "admin", isActive);
 
       // 3. Success: Show toast
@@ -572,9 +572,7 @@ export default function AdminManagementPage() {
         className: "bg-blue-500 text-white",
         duration: 3000,
       });
-
-      // Optional: Refetch in the background to ensure consistency
-      // fetchcardData();
+      fetchcardData(); // Refetch data to ensure UI is in sync with backend
     } catch (error: any) {
       // 2. Failure: Revert state and show error
       setUsers(originalUsers);

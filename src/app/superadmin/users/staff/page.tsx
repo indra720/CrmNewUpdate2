@@ -341,7 +341,7 @@ export default function StaffManagementPage() {
       return;
     }
 
-    if (!formData.email || !formData.password || !formData.teamLeader || !formData.admin) {
+    if (!formData.email || !formData.password || !formData.team_leader || !formData.admin) {
       toast({ title: "Validation Error", description: "Email, Password, Team Leader, and Admin are required fields.", variant: "destructive" });
       setIsSubmitting(false);
       return;
@@ -351,10 +351,10 @@ export default function StaffManagementPage() {
     Object.keys(formData).forEach((key) => {
       if (formData[key] !== null && formData[key] !== undefined && formData[key] !== "") {
         if (key === "team_leader") {
-          data.append("team_leader", parseInt(formData.team_leader));
+          data.append("team_leader", parseInt(formData.team_leader).toString());
         }
         else if (key === "admin") {
-          data.append("admin", parseInt(formData.admin));
+          data.append("admin", parseInt(formData.admin).toString());
         }
         else {
           data.append(key, formData[key]);
@@ -419,9 +419,9 @@ export default function StaffManagementPage() {
     Object.keys(submissionData).forEach(key => {
         if (submissionData[key] !== null && submissionData[key] !== undefined && submissionData[key] !== "") {
              if (key === 'team_leader') {
-                data.append('team_leader', parseInt(submissionData[key]));
+                data.append('team_leader', parseInt(submissionData[key]).toString());
             } else if (key === 'admin') {
-                data.append('admin', parseInt(submissionData[key]));
+                data.append('admin', parseInt(submissionData[key]).toString());
             } else {
                  data.append(key, submissionData[key]);
             }

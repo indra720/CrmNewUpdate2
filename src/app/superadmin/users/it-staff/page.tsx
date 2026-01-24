@@ -399,7 +399,6 @@ export default function ItStaffPage() {
 
       <AttendanceDialog
         userId={selectedUserId}
-        userEmail={selectedUserEmail} // ✅ YE ADD KARO
         isOpen={isAttendanceDialogOpen}
         onClose={() => setIsAttendanceDialogOpen(false)}
       />
