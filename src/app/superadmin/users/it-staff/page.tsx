@@ -45,6 +45,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import AddFreelancerForm from '@/components/forms/AddFreelancerForm';
 
 
 export default function ItStaffPage() {
@@ -58,6 +59,7 @@ export default function ItStaffPage() {
   const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [isAddFormOpen, setIsAddFormOpen] = useState(false);
 
   const { toast } = useToast();
 
@@ -65,71 +67,7 @@ export default function ItStaffPage() {
     setExpandedRowId(expandedRowId === rowId ? null : rowId);
   };
 
-  const handleOpenEditForm = (user: any) => {
-    setEditingUser(user);
-    setIsEditFormOpen(true);
-  };
-
-  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setEditingUser({ ...editingUser, [name]: value });
-  };
-
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingUser) return;
-
-    const token = localStorage.getItem("authToken");
-    if (!token) {
-      toast({
-        title: "Error",
-        description: "Authentication token not found.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/users/it-staff/edit/${editingUser.id}/`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Token ${token}`,
-          },
-          body: JSON.stringify({
-            name: editingUser.name,
-            mobile: editingUser.mobile,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to update IT staff.");
-      }
-
-      const updatedUser = await response.json();
-      setUsers(
-        users.map((u) => (u.id === editingUser.id ? { ...u, ...updatedUser } : u))
-      );
-      toast({
-        title: "Success",
-        description: "IT Staff updated successfully.",
-        className: "bg-green-500 text-white",
-      });
-      setIsEditFormOpen(false);
-      setEditingUser(null);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update IT staff.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const fetchUsers = async () => {
+  const fetchUsers = React.useCallback(async () => {
     const token = localStorage.getItem("authToken");
     try {
       const response = await fetch(
@@ -147,54 +85,52 @@ export default function ItStaffPage() {
         return;
       }
       const data = await response.json();
-      setUsers(data);
+      const usersWithSelfUser = data.map((user: any) => ({
+        ...user,
+        self_user: user.self_user || { user_active: user.active !== false },
+      }));
+      setUsers(usersWithSelfUser);
     } catch (error) {
       //console.error("Error fetching IT staff:", error);
     }
-  };
-
-  useEffect(() => {
-    // setUsers(mockUsers);
-    fetchUsers();
   }, []);
 
-  const handleToggle = async (id: number, isActive: boolean) => {
-    // 1. Optimistic UI Update
-    const originalUsers = [...users];
-    setUsers(
-      users.map((user) =>
-        user.id === id ? { ...user, active: isActive } : user
-      )
-    );
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
+  const handleToggle = async (id: number, isActive: boolean) => {
+    const originalUsers = [...users];
+
+    // Optimistic UI update
+          setUsers(prev =>
+            prev.map(user =>
+              user.id === id
+                ? { ...user, self_user: { ...(user.self_user || {}), user_active: isActive } }
+                : user
+            )
+          );
     try {
       await toggleUserActiveStatus(id, "staff", isActive);
 
-      // 3. Success: Show toast (assuming useToast is available)
       toast({
         title: "Status Updated",
-        description: `User status changed to ${
-          isActive ? "Active" : "Inactive"
-        }.`,
+        description: `User is now ${isActive ? "Active" : "Inactive"}`,
         className: "bg-blue-500 text-white",
         duration: 3000,
       });
-
-      // Optional: Refetch in the background to ensure consistency
-      // fetchUsers();
     } catch (error: any) {
-      // 2. Failure: Revert state and show error
+      // Revert on failure
       setUsers(originalUsers);
-      //console.error("Failed to update user status:", error);
+
       toast({
         title: "Error",
-        description: `Failed to update user status: ${
-          error.message || "Unknown error"
-        }`,
+        description: "Failed to update user status",
         variant: "destructive",
       });
     }
   };
+
 
   const filteredUsers = users.filter(
     (u) =>
@@ -222,6 +158,14 @@ export default function ItStaffPage() {
                 className="pl-10"
               />
             </div>
+            <Button size="icon" className="sm:hidden" onClick={() => setIsAddFormOpen(true)}>
+              <Plus className="h-4 w-4" />
+              <span className="sr-only">Add IT Staff</span>
+            </Button>
+            <Button className="hidden sm:flex" onClick={() => setIsAddFormOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add new IT staff
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="p-0 flex-1">
@@ -259,7 +203,7 @@ export default function ItStaffPage() {
                         <TableCell className="hidden md:table-cell">{user.mobile}</TableCell>
                         <TableCell className="hidden md:table-cell text-center">
                           <Switch
-                            checked={user.active}
+                            checked={user.self_user?.user_active}
                             onCheckedChange={(checked) => handleToggle(user.id, checked)}
                             aria-label={`Toggle status for ${user.name}`}
                           />
@@ -312,7 +256,7 @@ export default function ItStaffPage() {
                                   <div className="p-3 border-b border-gray-200 flex items-center justify-between">
                                     <span className="text-sm font-medium">Active Status:</span>
                                     <Switch
-                                      checked={user.active}
+                                      checked={user.self_user?.user_active}
                                       onCheckedChange={(checked) => handleToggle(user.id, checked)}
                                       aria-label={`Toggle status for ${user.name}`}
                                     />
@@ -401,6 +345,13 @@ export default function ItStaffPage() {
         userId={selectedUserId}
         isOpen={isAttendanceDialogOpen}
         onClose={() => setIsAttendanceDialogOpen(false)}
+      />
+
+      <AddFreelancerForm
+        isOpen={isAddFormOpen}
+        onClose={() => setIsAddFormOpen(false)}
+        userType="it_staff"
+        onSuccess={fetchUsers}
       />
     </div>
   );

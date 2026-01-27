@@ -223,7 +223,7 @@ export function SuperAdminSidebar({ isSidebarOpen, setSidebarOpen, isCollapsed, 
     <>
       <SidebarHeader isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
       <div className="flex-1 overflow-y-auto" data-sidebar="content">
-        <nav className="mt-4 p-4">
+        <nav className=" p-2">
           <SidebarContent isCollapsed={isCollapsed} setSidebarOpen={setSidebarOpen} />
         </nav>
       </div>

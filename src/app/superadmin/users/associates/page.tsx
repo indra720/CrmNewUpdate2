@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useEffect, useState } from 'react';
 import {
   Card,
@@ -61,6 +60,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { DateRange } from 'react-day-picker';
 import { addDays } from 'date-fns';
 import { toggleUserActiveStatus, fetchTeamLeaders } from "@/lib/api";
+import AddFreelancerForm from '@/components/forms/AddFreelancerForm';
 
 
 const kpiData = [
@@ -72,15 +72,6 @@ const kpiData = [
     { title: "Total Earning", valueKey: "total_earning", icon: DollarSign, color: "text-emerald-500", link: "/superadmin/reports/total-earning?source=associate" },
 ];
 
-
-const initialFormData = {
-    id: null,
-    name: "",
-    email: "",
-    password: "",
-    mobile: "",
-    teamLeader: "",
-};
 
 const UserDetailsDialog = ({ user, open, onOpenChange, getTeamLeaderName }: { user: any, open: boolean, onOpenChange: (open: boolean) => void, getTeamLeaderName: (id: number) => string }) => {
     if (!user) return null;
@@ -122,7 +113,6 @@ export default function AssociatesPage() {
   const [search, setSearch] = useState('');
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
-  const [formData, setFormData] = useState<any>(initialFormData);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [teamLeaders, setTeamLeaders] = useState<any[]>([]);
 
@@ -145,72 +135,56 @@ export default function AssociatesPage() {
     setExpandedRowId(expandedRowId === rowId ? null : rowId);
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchAssociates = React.useCallback(async () => {
+    setLoading(true);
+    try {
       const token = localStorage.getItem("authToken");
       if (!token) {
-        setError("Authentication token not found.");
-        setLoading(false);
-        return;
+        throw new Error("Authentication token not found.");
       }
-      try {
-        const [associatesData, teamLeadersData] = await Promise.all([
-          fetch(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/associates/dashboard/`,
-            {
-              headers: {
-                Authorization: ` Token ${token}`,
-              },
-            }
-          ).then(res => {
-            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-            return res.json();
-          }),
-          fetchTeamLeaders()
-        ]);
 
-        setcardData({
-            total_visit: associatesData.total_visits_leads,
-            interested: associatesData.total_interested_leads,
-            not_interested: associatesData.total_not_interested_leads,
-            other_location: associatesData.total_other_location_leads,
-            not_picked: associatesData.total_not_picked_leads,
-            total_earning: associatesData.total_earning,
-        });
-        
-        const usersWithSelfUser = associatesData.my_staff?.map((user: any) => ({ ...user, self_user: user.self_user || { user_active: user.user_active !== false } })) || []; 
-        setUsers(usersWithSelfUser);
-        setTeamLeaders(teamLeadersData);
+      const [associatesData, teamLeadersData] = await Promise.all([
+        fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/associates/dashboard/`,
+          {
+            headers: {
+              Authorization: ` Token ${token}`,
+            },
+          }
+        ).then(res => {
+          if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+          return res.json();
+        }),
+        fetchTeamLeaders()
+      ]);
 
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
+      setcardData({
+          total_visit: associatesData.total_visits_leads,
+          interested: associatesData.total_interested_leads,
+          not_interested: associatesData.total_not_interested_leads,
+          other_location: associatesData.total_other_location_leads,
+          not_picked: associatesData.total_not_picked_leads,
+          total_earning: associatesData.total_earning,
+      });
+      
+      const usersWithSelfUser = associatesData.my_staff?.map((user: any) => ({ ...user, self_user: user.self_user || { user_active: user.user_active !== false } })) || []; 
+      setUsers(usersWithSelfUser);
+      setTeamLeaders(teamLeadersData);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []); // Empty dependency array means this function is created once
 
-    fetchData();
-  }, []);
+  useEffect(() => {
+    fetchAssociates();
+  }, [fetchAssociates]); // Depend on fetchAssociates
 
   const getTeamLeaderName = (id: number) => {
     const leader = teamLeaders.find(tl => tl.id === id);
     return leader ? leader.name : 'N/A';
   };
-
-
-  const handleAddFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
-  
-  const handleAddFormSelectChange = (name: string, value: string) => {
-    setFormData({ ...formData, [name]: value });
-  };
-  
-  const handleOpenAddForm = () => {
-    setFormData(initialFormData);
-    setIsAddFormOpen(true);
-  }
 
   const handleOpenEditForm = async (user: any) => {
     try {
@@ -257,23 +231,6 @@ export default function AssociatesPage() {
     }
   }
   
-  const handleCloseAddForm = () => {
-    setIsAddFormOpen(false);
-    setFormData(initialFormData);
-  }
-  
-  const handleAddSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newUser = {...formData, id: Date.now(), created_date: new Date().toISOString(), self_user: { user_active: true }};
-    setUsers([...users, newUser]);
-    toast({
-        title: "Associate Added!",
-        description: `${formData.name} has been added successfully.`,
-        className: 'bg-green-500 text-white'
-    });
-    handleCloseAddForm();
-  };
-
   const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setEditingUser({ ...editingUser, [name]: value });
@@ -440,6 +397,14 @@ export default function AssociatesPage() {
                 />
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
+            <Button size="icon" className="sm:hidden" onClick={() => setIsAddFormOpen(true)}>
+              <PlusCircle className="h-4 w-4" />
+              <span className="sr-only">Add Associate</span>
+            </Button>
+            <Button className="hidden sm:flex" onClick={() => setIsAddFormOpen(true)}>
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Add new associate
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="p-0 flex-1">
@@ -626,59 +591,21 @@ export default function AssociatesPage() {
               </TableBody>
             </Table>
           </div>
-        </CardContent>
-      </Card>
-
-    <Dialog open={isAddFormOpen} onOpenChange={setIsAddFormOpen}>
-        <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-                <DialogTitle>Add New Associate</DialogTitle>
-                <DialogDescription>Fill in the details for the new associate.</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleAddSubmit} className="space-y-4 py-4">
-                <div className="space-y-2">
-                    <Label htmlFor="add-name">Name</Label>
-                    <Input id="add-name" name="name" value={formData.name} onChange={handleAddFormChange} required />
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="add-email">Email</Label>
-                    <Input id="add-email" name="email" type="email" value={formData.email} onChange={handleAddFormChange} required />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="add-password">Password</Label>
-                    <Input id="add-password" name="password" type="password" value={formData.password} onChange={handleAddFormChange} required />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="add-mobile">Mobile</Label>
-                    <Input id="add-mobile" name="mobile" value={formData.mobile} onChange={handleAddFormChange} required />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="add-teamLeader">Team Leader</Label>
-                    <Select onValueChange={(value) => handleAddFormSelectChange("teamLeader", value)} name="teamLeader" defaultValue={formData.teamLeader}>
-                        <SelectTrigger id="add-teamLeader">
-                            <SelectValue placeholder="Select Team Leader" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="Pooja Mehta">Pooja Mehta</SelectItem>
-                            <SelectItem value="Anita Das">Anita Das</SelectItem>
-                            <SelectItem value="Rajiv Verma">Rajiv Verma</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-                <DialogFooter>
-                    <Button type="button" variant="outline" onClick={handleCloseAddForm}>Cancel</Button>
-                    <Button type="submit">Save Associate</Button>
-                </DialogFooter>
-            </form>
-        </DialogContent>
-    </Dialog>
-
-    {editingUser && (
-      <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
-        <DialogContent className="w-[95vw] sm:max-w-md max-h-[80vh] overflow-y-auto hide-scrollbar">
-          <DialogHeader>
-            <DialogTitle>Edit Associate</DialogTitle>
-            <DialogDescription>
+                </CardContent>
+              </Card>
+        
+            <AddFreelancerForm
+                isOpen={isAddFormOpen}
+                onClose={() => setIsAddFormOpen(false)}
+                userType="freelancer"
+                onSuccess={fetchAssociates}
+            />
+        
+            {editingUser && (
+              <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
+                <DialogContent className="w-[95vw] sm:max-w-md max-h-[80vh] overflow-y-auto hide-scrollbar">
+                  <DialogHeader>
+                    <DialogTitle>Edit Associate</DialogTitle>            <DialogDescription>
               Update the details for {editingUser.name}.
             </DialogDescription>
           </DialogHeader>
@@ -734,3 +661,170 @@ export default function AssociatesPage() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+// class AddFreelancerAPIView(APIView):
+//     """
+//     API to add Freelancer or IT Staff.
+//     Logic mirrors the 'add_freelancer' view.
+//     Access: Superuser OR Admin only.
+//     """
+//     permission_classes = [IsAuthenticated,CustomIsSuperuser , IsCustomAdminUser]
+//     parser_classes = [MultiPartParser, FormParser] # For handling file uploads
+
+//     def post(self, request, format=None):
+//         serializer = AddFreelancerSerializer(data=request.data, context={'request': request})
+        
+//         if serializer.is_valid():
+//             try:
+//                 staff_instance = serializer.save()
+                
+//                 # Activity Log (Optional - based on your style)
+//                 try:
+//                     user_type = "Super User" if request.user.is_superuser else "Admin User"
+//                     ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR'))
+//                     tagline = f"New Freelancer/Staff ({staff_instance.name}) added by {user_type}"
+                    
+//                     # Logic to find admin for log
+//                     admin_log = None
+//                     if request.user.is_admin:
+//                         admin_log = Admin.objects.filter(self_user=request.user).last()
+
+//                     ActivityLog.objects.create(
+//                         admin=admin_log, # Might be null if superuser
+//                         user=request.user if request.user.is_superuser else None,
+//                         description=tagline,
+//                         ip_address=ip,
+//                         email=request.user.email,
+//                         user_type=user_type,
+//                         activity_type="Freelancer Created",
+//                         name=request.user.name
+//                     )
+//                 except Exception:
+//                     pass # Log fail shouldn't stop the response
+
+//                 return Response({
+//                     "message": "Profile created successfully. Please wait for review.",
+//                     "data": StaffProfileSerializer(staff_instance).data
+//                 }, status=status.HTTP_201_CREATED)
+                
+//             except Exception as e:
+//                 return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+//         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+
+
+
+// class AddFreelancerSerializer(serializers.ModelSerializer):
+//     # User model fields inputs
+//     password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
+//     user_type = serializers.ChoiceField(choices=['freelancer', 'it_staff'], write_only=True)
+//     profile_image = serializers.FileField(required=False, allow_null=True)
+    
+//     # Referral code field (maps to join_referral in Staff)
+//     referral_code = serializers.CharField(source='join_referral', required=False, allow_blank=True)
+
+//     class Meta:
+//         model = Staff
+//         fields = [
+//             'name', 'email', 'mobile', 'password', 'user_type', 'profile_image',
+//             'address', 'city', 'state', 'pincode', 'referral_code',
+//             'dob', 'pancard', 'aadharCard', 'degree', 
+//             'account_number', 'upi_id', 'bank_name', 'ifsc_code'
+//         ]
+//         extra_kwargs = {
+//             'email': {'required': True},
+//             'mobile': {'required': True},
+//             'pancard': {'required': True},     
+//             'aadharCard': {'required': True}   
+//         }
+
+//     # --- VALIDATIONS START ---
+
+//     def validate_email(self, value):
+//         """Check if Email (Username) is unique in User model"""
+//         if User.objects.filter(email=value).exists():
+//             raise serializers.ValidationError("Email (Username) Already Exists.")
+//         return value
+
+//     def validate_mobile(self, value):
+//         """Check if Mobile is unique in Staff model"""
+//         if Staff.objects.filter(mobile=value).exists():
+//             raise serializers.ValidationError("Mobile Number Already Exists.")
+//         return value
+
+//     def validate_pancard(self, value):
+//         """Check if PAN Card is unique"""
+//         if value and Staff.objects.filter(pancard__iexact=value).exists():
+//             raise serializers.ValidationError("This PAN Card Number is already registered.")
+//         return value.upper() 
+
+//     def validate_aadharCard(self, value):
+//         """Check if Aadhar Card is unique"""
+//         if value and Staff.objects.filter(aadharCard=value).exists():
+//             raise serializers.ValidationError("This Aadhar Card Number is already registered.")
+//         return value
+
+//     # --- VALIDATIONS END ---
+
+//     def create(self, validated_data):
+//         # 1. Extract data
+//         password = validated_data.pop('password')
+//         user_type = validated_data.pop('user_type')
+//         profile_image = validated_data.pop('profile_image', None)
+        
+//         email = validated_data.get('email')
+//         name = validated_data.get('name')
+//         mobile = validated_data.get('mobile')
+
+//         # 2. Determine Flags based on user_type
+//         is_freelancer = False
+//         is_it_staff = False
+        
+//         if user_type == "freelancer":
+//             is_freelancer = True
+//         elif user_type == "it_staff":
+//             is_it_staff = True
+
+//         # 3. Create User
+//         try:
+//             user = User.objects.create_user(
+//                 username=email, 
+//                 email=email,
+//                 password=password,
+//                 name=name,
+//                 mobile=mobile,
+//                 profile_image=profile_image,
+//                 is_staff_new=True,
+//                 is_freelancer=is_freelancer,
+//                 is_it_staff=is_it_staff
+//             )
+//         except Exception as e:
+//             raise serializers.ValidationError(f"Error creating user: {e}")
+
+//         # 4. Get Team Leader (Logic: Last created Team Leader)
+//         team_leader = Team_Leader.objects.filter().last()
+        
+//         # 5. Create Staff Profile
+//         try:
+//             staff = Staff.objects.create(
+//                 team_leader=team_leader,
+//                 user=user,
+//                 **validated_data
+//             )
+//         except Exception as e:
+//             user.delete() # Rollback user if staff creation fails
+//             raise serializers.ValidationError(f"Error creating staff profile: {e}")
+
+//         return staff

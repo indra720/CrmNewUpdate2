@@ -216,7 +216,7 @@ export function AdminSidebar({ isSidebarOpen, setSidebarOpen, isCollapsed, setIs
     <>
       <SidebarHeader isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
       <div className="flex-1 overflow-y-auto" data-sidebar="content">
-        <nav className="mt-4 p-4">
+        <nav className="p-2">
           <SidebarContent isCollapsed={isCollapsed} setSidebarOpen={setSidebarOpen}/>
         </nav>
       </div>
