@@ -8,7 +8,22 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 
-export const ProjectCard = ({ project, members = [] }) => {
+
+type ProjectCardProps = {
+  project: {
+    id: number;
+    name: string;
+    description?: string;
+    status: string;
+    startDate: string;
+    endDate?: string;
+    progress: number;
+    slug: string;
+  };
+  members?: { name: string }[];
+};
+
+export const ProjectCard = ({ project, members = [] }: ProjectCardProps) => {
   const statusStyles = {
     active: {
       badge: "bg-green-100 text-green-800 hover:bg-green-100 border-green-200 capitalize",
@@ -53,13 +68,14 @@ export const ProjectCard = ({ project, members = [] }) => {
   const health = getHealthStatus(project, progress); // Pass progress to health status calculation
 
   return (
-    <Link href={`/admin/project/${project.slug}`} className="block h-full">
+    <Link href={`/admin/project/${project.id}`} className="block h-full">
       <Card className="h-full hover:shadow-lg cursor-pointer border-border/50 hover:border-primary/30 transition-all p-4 flex flex-col">
         <CardHeader className="p-0 flex-1">
-          <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-start  justify-between gap-3 mb-3">
+            <h3 className="font-semibold text-base text-foreground mb-1 line-clamp-1">{project.name}</h3>
             <Badge className={cn("whitespace-nowrap flex-shrink-0", styles.badge)}>{project.status.replace('_', ' ')}</Badge>
           </div>
-          <h3 className="font-semibold text-base text-foreground mb-1 line-clamp-1">{project.name}</h3>
+
           <p className="text-xs text-muted-foreground line-clamp-2">{project.description}</p>
         </CardHeader>
         {/* Project Health + Progress */}
@@ -88,32 +104,74 @@ export const ProjectCard = ({ project, members = [] }) => {
           </div>
         </div>
 
-        
-
-
         <CardContent className="p-0 pt-4">
           <div className="flex items-end justify-between text-sm text-muted-foreground">
-
-
-            {/* Date & Members */}
-            {/* <div className='space-y-2'>
-              <div className="flex items-center gap-2 text-xs">
-                <CalendarDays className="w-4 h-4" />
-                <span>{format(new Date(project.endDate), "MMM d, yyyy")}</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                <Users className="w-4 h-4" />
-                <span>{members.length} Members</span>
-              </div>
-            </div> */}
             <div className="space-y-2 text-xs">
-              {/* End Date */}
+
               <div className="flex items-center gap-2">
                 <CalendarDays className="w-4 h-4" />
                 <span>{format(new Date(project.endDate), "MMM d, yyyy")}</span>
               </div>
 
-              {/* Member Names */}
+
+              {members.length > 0 && (
+                <div className="flex items-start gap-2">
+                  <Users className="w-4 h-4 mt-0.5" />
+                  <div className="flex flex-wrap gap-1">
+                    {members.slice(0, 2).map((member, index) => (
+                      <Badge
+                        key={index}
+                        variant="secondary"
+                        className="text-[10px] px-2 py-0.5"
+                      >
+                        {member.name}
+                      </Badge>
+                    ))}
+
+                    {members.length > 2 && (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] px-2 py-0.5 cursor-pointer hover:bg-muted"
+                        title={members.map(m => m.name).join(', ')}
+                      >
+                        +{members.length - 2} more
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            {members.length > 0 && (
+              <div className="flex -space-x-2">
+                {members.slice(0, 3).map((member, index) => (
+                  <Avatar key={index} className={cn("w-8 h-8 border-2", styles.avatar)}>
+                    <AvatarFallback className="text-xs">
+                      {member.name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                ))}
+                {members.length > 3 && (
+                  <div className={cn("w-8 h-8 rounded-full bg-muted border-2 flex items-center justify-center text-xs text-muted-foreground", styles.avatar)}>
+                    +{members.length - 3}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </CardContent>
+
+        {/* <CardContent className="p-0 pt-4">
+          <div className="flex items-end justify-between text-sm text-muted-foreground">
+
+
+            <div className="space-y-2 text-xs">
+
+              <div className="flex items-center gap-2">
+                <CalendarDays className="w-4 h-4" />
+                <span>{format(new Date(project.endDate), "MMM d, yyyy")}</span>
+              </div>
+
+
               {members.length > 0 && (
                 <div className="flex items-start gap-2">
                   <Users className="w-4 h-4 mt-0.5" />
@@ -143,7 +201,6 @@ export const ProjectCard = ({ project, members = [] }) => {
             </div>
 
 
-            {/* Avatars */}
             {members.length > 0 && (
               <div className="flex -space-x-2">
                 {members.slice(0, 3).map((member, index) => (
@@ -154,19 +211,25 @@ export const ProjectCard = ({ project, members = [] }) => {
                   </Avatar>
                 ))}
                 {members.length > 3 && (
-                  <div className={cn("w-8 h-8 rounded-full bg-muted border-2 flex items-center justify-center text-xs text-muted-foreground", styles.avatar)}>
+                  <div
+                    className={cn(
+                      "w-8 h-8 rounded-full bg-muted border-2 flex items-center justify-center text-xs",
+                      styles.avatar
+                    )}
+                  >
                     +{members.length - 3}
                   </div>
                 )}
               </div>
             )}
+
           </div>
-        </CardContent>
+        </CardContent> */}
+
       </Card>
     </Link>
   );
 };
-
 
 
 

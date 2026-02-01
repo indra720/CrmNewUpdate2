@@ -70,6 +70,7 @@ import {
   Search,
   X,
   DollarSign,
+  EyeOff, // Added EyeOff
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';

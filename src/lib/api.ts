@@ -38,7 +38,7 @@ export async function toggleUserActiveStatus(
 
     if (!response.ok) {
       const errorData = await response.json();
-      //console.error("TOGGLE API: Error Response Data -", errorData);
+      console.error("TOGGLE API: Error Response Data -", errorData);
       throw new Error(
         errorData.message || errorData.detail || `HTTP error! status: ${response.status}`
       );

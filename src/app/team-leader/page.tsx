@@ -56,6 +56,7 @@ import {
   Minus,
   Plus,
   RotateCw,
+  EyeOff, // Added EyeOff
 } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
@@ -102,7 +103,6 @@ const initialFormData = {
   upi_id: "",
   salary: "",
   referralCode: "",
-  teamLeader: "",
   admin: "",
 };
 
@@ -218,6 +218,7 @@ const TeamLeaderDashboardContent = () => {
   const [error, setError] = useState<string | null>(null);
   const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // Added showPassword state
 
   const fetchData = async (start?: string, end?: string) => {
     setLoading(true);
@@ -265,7 +266,7 @@ const TeamLeaderDashboardContent = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, []); // Empty dependency array means this effect runs once on mount
 
   const handleFilter = () => {
     const formattedStartDate = startDate ? format(startDate, 'yyyy-MM-dd') : undefined;
@@ -314,12 +315,14 @@ const TeamLeaderDashboardContent = () => {
     setFormData(initialFormData);
     setActiveTab("personal");
     setIsAddFormOpen(true);
+    setShowPassword(false); // Reset password visibility on form open
   };
 
   const handleOpenEditForm = (user: any) => {
     setEditingUser({ ...user, name: user.username });
     setActiveTab("personal");
     setIsEditFormOpen(true);
+    setShowPassword(false); // Reset password visibility on form open
   };
 
   const handleCloseAddForm = () => {
@@ -836,18 +839,28 @@ const TeamLeaderDashboardContent = () => {
                           onChange={handleAddFormChange}
                           required
                         />
-                        <InputField
-                          id="password"
-                          label="Password *"
-                          name="password"
-                          type="password"
-                          placeholder="••••••••"
-                          icon={Lock}
-                          value={formData.password}
-                          onChange={handleAddFormChange}
-                          required
-                        />
-
+                        <div className="relative">
+                          <InputField
+                            id="password"
+                            label="Password *"
+                            name="password"
+                            type={showPassword ? "text" : "password"} // Dynamic type
+                            placeholder="••••••••"
+                            icon={Lock}
+                            value={formData.password}
+                            onChange={handleAddFormChange}
+                            required
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-9 h-8 w-8 text-muted-foreground"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          </Button>
+                        </div>
                         <InputField
                           id="dob"
                           label="Date of Birth"
@@ -1100,43 +1113,27 @@ const TeamLeaderDashboardContent = () => {
                             onChange={handleEditFormChange}
                             required
                           />
-                          <InputField
-                            id="password"
-                            label="Password"
-                            name="password"
-                            type="password"
-                            placeholder="Leave unchanged"
-                            icon={Lock}
-                            value={editingUser.password}
-                            onChange={handleEditFormChange}
-                          />
-                          <InputField
-                            id="teamLeader"
-                            label="Team Leader"
-                            name="teamLeader"
-                            value={editingUser.teamLeader}
-                            onChange={handleEditFormChange}
-                          >
-                            <Select
-                              onValueChange={(value) =>
-                                handleEditSelectChange("teamLeader", value)
-                              }
-                              name="teamLeader"
-                              defaultValue={editingUser.teamLeader}
+                          <div className="relative">
+                            <InputField
+                              id="password"
+                              label="Password"
+                              name="password"
+                              type={showPassword ? "text" : "password"} // Dynamic type
+                              placeholder="Leave unchanged"
+                              icon={Lock}
+                              value={editingUser.password}
+                              onChange={handleEditFormChange}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute  right-1 top-9 h-8 w-8 text-muted-foreground"
+                              onClick={() => setShowPassword(!showPassword)}
                             >
-                              <SelectTrigger className="pl-10 pr-4 h-11">
-                                <SelectValue placeholder="Select Team Leader" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="teamlead">
-                                  teamlead
-                                </SelectItem>
-                                <SelectItem value="teamlead2">
-                                  teamlead2
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </InputField>
+                              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                            </Button>
+                          </div>
                           <InputField
                             id="dob"
                             label="Date of Birth"

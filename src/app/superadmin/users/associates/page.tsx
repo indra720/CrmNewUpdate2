@@ -28,16 +28,16 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select"
 import {
   Pencil,
   PlusCircle,
-  Users,  // Changed from 'users' to 'Users'
+  Users, // Changed from 'users' to 'Users'
   Check,
   Phone,
   MapPin,
@@ -59,76 +59,66 @@ import Link from 'next/link';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { DateRange } from 'react-day-picker';
 import { addDays } from 'date-fns';
-import { toggleUserActiveStatus, fetchTeamLeaders } from "@/lib/api";
+import { toggleUserActiveStatus, fetchTeamLeaders, fetchAdminsForSelection } from "@/lib/api"; // Added fetchAdminsForSelection import
 import AddFreelancerForm from '@/components/forms/AddFreelancerForm';
 
-
 const kpiData = [
-    { title: "Total Visit", valueKey: "total_visit", icon: Eye, color: "text-blue-500", link: "/superadmin/reports/visit?source=associate" },
-    { title: "Interested", valueKey: "interested", icon: Check, color: "text-green-500", link: "/superadmin/reports/interested?source=associate" },
-    { title: "Not Interested", valueKey: "not_interested", icon: XCircle, color: "text-red-500", link: "/superadmin/reports/not-interested?source=associate" },
-    { title: "Other Location", valueKey: "other_location", icon: MapPin, color: "text-yellow-500", link: "/superadmin/reports/other-location?source=associate" },
-    { title: "Not Picked", valueKey: "not_picked", icon: Phone, color: "text-purple-500", link: "/superadmin/reports/not-picked?source=associate" },
-    { title: "Total Earning", valueKey: "total_earning", icon: DollarSign, color: "text-emerald-500", link: "/superadmin/reports/total-earning?source=associate" },
+  { title: "Total Visit", valueKey: "total_visit", icon: Eye, color: "text-blue-500", link: "/superadmin/reports/visit?source=associate" },
+  { title: "Interested", valueKey: "interested", icon: Check, color: "text-green-500", link: "/superadmin/reports/interested?source=associate" },
+  { title: "Not Interested", valueKey: "not_interested", icon: XCircle, color: "text-red-500", link: "/superadmin/reports/not-interested?source=associate" },
+  { title: "Other Location", valueKey: "other_location", icon: MapPin, color: "text-yellow-500", link: "/superadmin/reports/other-location?source=associate" },
+  { title: "Not Picked", valueKey: "not_picked", icon: Phone, color: "text-purple-500", link: "/superadmin/reports/not-picked?source=associate" },
+  { title: "Total Earning", valueKey: "total_earning", icon: DollarSign, color: "text-emerald-500", link: "/superadmin/reports/total-earning?source=associate" },
 ];
 
-
 const UserDetailsDialog = ({ user, open, onOpenChange, getTeamLeaderName }: { user: any, open: boolean, onOpenChange: (open: boolean) => void, getTeamLeaderName: (id: number) => string }) => {
-    if (!user) return null;
-
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-md bg-card shadow-2xl rounded-2xl p-0">
-                <DialogHeader className="p-6 pb-4 text-center">
-                    <DialogTitle className="text-xl">Associate Full Details</DialogTitle>
-                </DialogHeader>
-                <div className="p-6 pt-0 grid grid-cols-1 gap-5 max-h-[60vh] overflow-y-auto">
-                    <div><p className="text-sm text-muted-foreground">Name</p><p className="font-medium text-foreground">{user.name || 'N/A'}</p></div>
-                    <div><p className="text-sm text-muted-foreground">Mobile No</p><p className="font-medium text-foreground">{user.mobile || 'N/A'}</p></div>
-                    <div><p className="text-sm text-muted-foreground">Team Leader</p><p className="font-medium text-foreground">{getTeamLeaderName(user.team_leader)}</p></div>
-                    <div><p className="text-sm text-muted-foreground">Created Date</p><p className="font-medium text-foreground">{user.created_date ? new Date(user.created_date).toLocaleDateString() : 'N/A'}</p></div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-muted-foreground">Active Status</p>
-                      <Switch
-                        id={`active-status-modal-${user.id}`}
-                        checked={user.self_user?.user_active}
-                        disabled
-                      />
-                    </div>
-                </div>
-                <DialogFooter className="p-4 border-t bg-muted/50 rounded-b-2xl flex-row justify-end gap-2">
-                    <DialogClose asChild>
-                        <Button type="button" variant="outline" className="w-full text-foreground hover:bg-primary hover:text-primary-foreground">
-                            Close
-                        </Button>
-                    </DialogClose>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    )
+  if (!user) return null;
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md bg-card shadow-2xl rounded-2xl p-0">
+        <DialogHeader className="p-6 pb-4 text-center">
+          <DialogTitle className="text-xl">Associate Full Details</DialogTitle>
+        </DialogHeader>
+        <div className="p-6 pt-0 grid grid-cols-1 gap-5 max-h-[60vh] overflow-y-auto">
+          <div><p className="text-sm text-muted-foreground">Name</p><p className="font-medium text-foreground">{user.name || 'N/A'}</p></div>
+          <div><p className="text-sm text-muted-foreground">Mobile No</p><p className="font-medium text-foreground">{user.mobile || 'N/A'}</p></div>
+          <div><p className="text-sm text-muted-foreground">Team Leader</p><p className="font-medium text-foreground">{user.team_leder_name || 'N/A'}</p></div>
+          <div><p className="text-sm text-muted-foreground">Created Date</p><p className="font-medium text-foreground">{user.created_date ? new Date(user.created_date).toLocaleDateString() : 'N/A'}</p></div>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">Active Status</p>
+            <Switch
+              id={`active-status-modal-${user.id}`}
+              checked={user.self_user?.user_active}
+              disabled
+            />
+          </div>
+        </div>
+        <DialogFooter className="p-4 border-t bg-muted/50 rounded-b-2xl flex-row justify-end gap-2">
+          <DialogClose asChild>
+            <Button type="button" variant="outline" className="w-full text-foreground hover:bg-primary hover:text-primary-foreground">
+              Close
+            </Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
 }
 
 export default function AssociatesPage() {
   const [users, setUsers] = useState<any[]>([]);
+  const [admins, setAdmins] = useState<any[]>([]); // NEW: Added admins state
   const [search, setSearch] = useState('');
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [teamLeaders, setTeamLeaders] = useState<any[]>([]);
-
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
-
-
   const [cardData, setcardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
-    from: new Date(),
-    to: addDays(new Date(), 7),
-  });
-
   const { toast } = useToast();
 
   const toggleRow = (rowId: number) => {
@@ -142,8 +132,8 @@ export default function AssociatesPage() {
       if (!token) {
         throw new Error("Authentication token not found.");
       }
-
-      const [associatesData, teamLeadersData] = await Promise.all([
+      // UPDATED: Fetch associates data, admins, and team leaders in parallel
+      const [associatesData, adminsData, teamLeadersData] = await Promise.all([
         fetch(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/associates/dashboard/`,
           {
@@ -155,31 +145,48 @@ export default function AssociatesPage() {
           if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
           return res.json();
         }),
+        fetchAdminsForSelection(), // NEW: Fetch admins
         fetchTeamLeaders()
       ]);
 
       setcardData({
-          total_visit: associatesData.total_visits_leads,
-          interested: associatesData.total_interested_leads,
-          not_interested: associatesData.total_not_interested_leads,
-          other_location: associatesData.total_other_location_leads,
-          not_picked: associatesData.total_not_picked_leads,
-          total_earning: associatesData.total_earning,
+        total_visit: associatesData.total_visits_leads,
+        interested: associatesData.total_interested_leads,
+        not_interested: associatesData.total_not_interested_leads,
+        other_location: associatesData.total_other_location_leads,
+        not_picked: associatesData.total_not_picked_leads,
+        total_earning: associatesData.total_earning,
       });
-      
-      const usersWithSelfUser = associatesData.my_staff?.map((user: any) => ({ ...user, self_user: user.self_user || { user_active: user.user_active !== false } })) || []; 
+
+      const usersWithSelfUser = associatesData.my_staff?.map((user: any) => ({
+        ...user,
+        created_date: user.created_date,
+        team_leder_name: user.team_leder_name,
+        self_user: { user_active: !!user.user_active }
+      })) || [];
       setUsers(usersWithSelfUser);
+
+      // NEW: Set admins and team leaders
+      setAdmins(adminsData);
       setTeamLeaders(teamLeadersData);
     } catch (err: any) {
       setError(err.message);
+      // NEW: Handle admins/team leaders error
+      setAdmins([]);
+      setTeamLeaders([]);
+      toast({
+        title: "Warning",
+        description: "Could not load admin and team leader data.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
-  }, []); // Empty dependency array means this function is created once
+  }, [toast]);
 
   useEffect(() => {
     fetchAssociates();
-  }, [fetchAssociates]); // Depend on fetchAssociates
+  }, [fetchAssociates]);
 
   const getTeamLeaderName = (id: number) => {
     const leader = teamLeaders.find(tl => tl.id === id);
@@ -197,32 +204,28 @@ export default function AssociatesPage() {
         });
         return;
       }
-
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/users/staff/edit/${user.id}/`, {
-        
         headers: {
-          
           Authorization: `Token ${token}`,
         },
       });
-
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
       const associateData = await response.json();
-      
+
       setEditingUser({
         id: associateData.id,
         name: associateData.name || "",
         email: associateData.email || "",
         mobile: associateData.mobile || "",
+        admin: associateData.admin || "",
         teamLeader: associateData.team_leader || "",
+        password: "",
       });
-      
+
       setIsEditFormOpen(true);
     } catch (error: any) {
-      //console.error("Error fetching associate data:", error);
       toast({
         title: "Error",
         description: "Failed to fetch associate data for editing.",
@@ -230,12 +233,12 @@ export default function AssociatesPage() {
       });
     }
   }
-  
+
   const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setEditingUser({ ...editingUser, [name]: value });
   };
-  
+
   const handleEditSelectChange = (name: string, value: string) => {
     setEditingUser({ ...editingUser, [name]: value });
   };
@@ -243,7 +246,14 @@ export default function AssociatesPage() {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
-
+    if (!editingUser.name || !editingUser.email || !editingUser.mobile || !editingUser.admin || !editingUser.teamLeader) {
+      toast({
+        title: "Validation Error",
+        description: "Name, Email, Mobile, Admin, and Team Leader are required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
     const token = localStorage.getItem("authToken");
     if (!token) {
       toast({
@@ -253,12 +263,13 @@ export default function AssociatesPage() {
       });
       return;
     }
-
     const data = new FormData();
     if (editingUser.name) data.append("name", editingUser.name);
     if (editingUser.email) data.append("email", editingUser.email);
     if (editingUser.mobile) data.append("mobile", editingUser.mobile);
+    if (editingUser.admin) data.append("admin", parseInt(editingUser.admin).toString());
     if (editingUser.teamLeader) data.append("team_leader", editingUser.teamLeader);
+    if (editingUser.password) data.append("password", editingUser.password);
 
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/users/staff/edit/${editingUser.id}/`, {
@@ -268,23 +279,22 @@ export default function AssociatesPage() {
         },
         body: data,
       });
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error("Failed to update associate.");
       }
-
       const updatedUser = await response.json();
       setUsers(users.map((u: any) => u.id === editingUser.id ? { ...u, ...updatedUser } : u));
-      
+
       toast({
         title: "Associate Updated!",
         description: `${editingUser.name} has been updated successfully.`,
         className: "bg-green-500 text-white"
       });
-      
+
       setIsEditFormOpen(false);
       setEditingUser(null);
+      fetchAssociates();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -295,7 +305,6 @@ export default function AssociatesPage() {
   };
 
   const handleToggle = async (id: number, isActive: boolean) => {
-    // 1. Optimistic UI Update
     const originalUsers = [...users];
     setUsers(
       users.map((u: any) =>
@@ -303,32 +312,23 @@ export default function AssociatesPage() {
           ? { ...u, self_user: { ...u.self_user, user_active: isActive } }
           : u
       )
-    );
-
-    try {
-      await toggleUserActiveStatus(id, "staff", isActive);
-
-      // 3. Success: Show toast
-      toast({
-        title: "Status Updated",
-        description: `User status changed to ${
-          isActive ? "Active" : "Inactive"
-        }.`,
+        );
+        console.log(`Attempting to toggle status for user ID: ${id}, type: 'staff', active: ${isActive}`);
+        try {
+          await toggleUserActiveStatus(id, "staff", isActive);
+          toast({
+            title: "Status Updated",
+        description: `User status changed to ${isActive ? "Active" : "Inactive"
+          }.`,
         className: "bg-blue-500 text-white",
         duration: 3000,
       });
-
-      // Optional: Refetch in the background to ensure consistency
-      // fetchData(); // Use fetchData for this component
     } catch (error: any) {
-      // 2. Failure: Revert state and show error
       setUsers(originalUsers);
-      //console.error("Failed to update user status:", error);
       toast({
         title: "Error",
-        description: `Failed to update user status: ${
-          error.message || "Unknown error"
-        }`,
+        description: `Failed to update user status: ${error.message || "Unknown error"
+          }`,
         variant: "destructive",
       });
     }
@@ -341,7 +341,7 @@ export default function AssociatesPage() {
 
   const KpiCard = ({ title, value, icon, color, link }: { title: string, value: string | number, icon: React.ElementType, color: string, link?: string }) => {
     const cardContent = (
-       <Card className="shadow-lg rounded-2xl hover:shadow-xl transition-shadow duration-300">
+      <Card className="shadow-lg rounded-2xl hover:shadow-xl transition-shadow duration-300">
         <CardContent className="py-3 flex flex-col items-center justify-center text-center">
           <div className={`text-3xl ${color} mb-1`}>
             {React.createElement(icon, { className: "h-6 w-6" })}
@@ -351,18 +351,16 @@ export default function AssociatesPage() {
         </CardContent>
       </Card>
     );
-
     if (link) {
       return <Link href={link}>{cardContent}</Link>;
     }
-
     return cardContent;
   };
 
   return (
     <div className="space-y-6 flex flex-col h-full">
-        <h1 className="text-2xl font-bold tracking-tight">Associate users</h1>
-       {!loading && cardData ? (
+      <h1 className="text-2xl font-bold tracking-tight">Associate users</h1>
+      {!loading && cardData ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {kpiData.map((card, index) => (
             <KpiCard
@@ -380,22 +378,21 @@ export default function AssociatesPage() {
           Loading dashboard...
         </p>
       )}
-
       <Card className="shadow-lg rounded-2xl flex-1 flex flex-col">
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-                <CardTitle>Associate List</CardTitle>
-                <CardDescription className="hidden sm:block">View and manage associate users.</CardDescription>
-            </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div>
+            <CardTitle>Associate List</CardTitle>
+            <CardDescription className="hidden sm:block">View and manage associate users.</CardDescription>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <div className="relative">
-                <Input
+              <Input
                 placeholder="Search..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="flex-1 sm:flex-initial sm:max-w-xs pl-10"
-                />
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              />
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
             <Button size="icon" className="sm:hidden" onClick={() => setIsAddFormOpen(true)}>
               <PlusCircle className="h-4 w-4" />
@@ -442,7 +439,7 @@ export default function AssociatesPage() {
                         <div className="hidden lg:block">{index + 1}</div>
                       </TableCell>
                       <TableCell className="font-medium">{user.name}</TableCell>
-                      <TableCell className="hidden md:table-cell">{getTeamLeaderName(user.team_leader)}</TableCell>
+                      <TableCell className="hidden md:table-cell">{user.team_leder_name}</TableCell>
                       <TableCell className="hidden md:table-cell">{user.mobile}</TableCell>
                       <TableCell className="hidden lg:table-cell">
                         {user.created_date ? new Date(user.created_date).toLocaleDateString() : 'N/A'}
@@ -537,7 +534,7 @@ export default function AssociatesPage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-0 border-t border-gray-200">
                                   <div className="p-3 border-b border-r md:border-r-0 border-gray-200 flex items-center justify-between">
                                     <span className="text-sm font-medium">Team Lead:</span>
-                                    <span className="text-sm">{getTeamLeaderName(user.team_leader)}</span>
+                                    <span className="text-sm">{user.team_leder_name}</span>
                                   </div>
                                   <div className="p-3 border-b border-l md:border-l-0 border-gray-200 flex items-center justify-between">
                                     <span className="text-sm font-medium">Mobile:</span>
@@ -591,73 +588,91 @@ export default function AssociatesPage() {
               </TableBody>
             </Table>
           </div>
-                </CardContent>
-              </Card>
-        
-            <AddFreelancerForm
-                isOpen={isAddFormOpen}
-                onClose={() => setIsAddFormOpen(false)}
-                userType="freelancer"
-                onSuccess={fetchAssociates}
-            />
-        
-            {editingUser && (
-              <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
-                <DialogContent className="w-[95vw] sm:max-w-md max-h-[80vh] overflow-y-auto hide-scrollbar">
-                  <DialogHeader>
-                    <DialogTitle>Edit Associate</DialogTitle>            <DialogDescription>
-              Update the details for {editingUser.name}.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleEditSubmit} className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Name</Label>
-              <Input id="edit-name" name="name" value={editingUser.name} onChange={handleEditFormChange} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-email">Email</Label>
-              <Input id="edit-email" name="email" type="email" value={editingUser.email} onChange={handleEditFormChange} required />
-            </div>
-             <div className="space-y-2">
-              <Label htmlFor="edit-mobile">Mobile</Label>
-              <Input id="edit-mobile" name="mobile" value={editingUser.mobile} onChange={handleEditFormChange} required />
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="edit-teamLeader">Team Leader</Label>
-                <Select onValueChange={(value) => handleEditSelectChange("teamLeader", value)} name="teamLeader" defaultValue={editingUser.teamLeader}>
-                    <SelectTrigger id="edit-teamLeader">
-                        <SelectValue placeholder="Select Team Leader" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {teamLeaders.map((leader) => (
-                            <SelectItem key={leader.id} value={String(leader.id)}>
-                                {leader.name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
+        </CardContent>
+      </Card>
+
+      <AddFreelancerForm
+        isOpen={isAddFormOpen}
+        onClose={() => setIsAddFormOpen(false)}
+        userType="freelancer"
+        onSuccess={fetchAssociates}
+        teamLeaders={teamLeaders}
+        admins={admins}
+      />
+
+      {editingUser && (
+        <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
+          <DialogContent className="w-[95vw] sm:max-w-md max-h-[80vh] overflow-y-auto hide-scrollbar">
+            <DialogHeader>
+              <DialogTitle>Edit Associate</DialogTitle>
+              <DialogDescription>
+                Update the details for {editingUser.name}.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleEditSubmit} className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Name</Label>
+                <Input id="edit-name" name="name" value={editingUser.name} onChange={handleEditFormChange} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email</Label>
+                <Input id="edit-email" name="email" type="email" value={editingUser.email} onChange={handleEditFormChange} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-mobile">Mobile</Label>
+                <Input id="edit-mobile" name="mobile" value={editingUser.mobile} onChange={handleEditFormChange} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-admin">Admin *</Label>
+                <Select onValueChange={(value) => handleEditSelectChange("admin", value)} name="admin" value={editingUser.admin?.toString()} required>
+                  <SelectTrigger id="edit-admin">
+                    <SelectValue placeholder="Select Admin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {admins.map((admin) => (
+                      <SelectItem key={admin.id} value={String(admin.id)}>
+                        {admin.name || admin.user?.first_name || admin.user?.email || `Admin ${admin.id}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-password">New Password (optional)</Label>
-              <Input id="edit-password" name="password" type="password" placeholder="Leave blank to keep current password" onChange={handleEditFormChange} />
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsEditFormOpen(false)}>Cancel</Button>
-              <Button type="submit">Save Changes</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    )}
-      
-    {selectedUser && (
-        <UserDetailsDialog 
-            user={selectedUser} 
-            open={isDetailsOpen} 
-            onOpenChange={setIsDetailsOpen}
-            getTeamLeaderName={getTeamLeaderName}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-teamLeader">Team Leader *</Label>
+                <Select onValueChange={(value) => handleEditSelectChange("teamLeader", value)} name="teamLeader" value={editingUser.teamLeader?.toString()} required>
+                  <SelectTrigger id="edit-teamLeader">
+                    <SelectValue placeholder="Select Team Leader" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamLeaders.map((leader) => (
+                      <SelectItem key={leader.id} value={String(leader.id)}>
+                        {leader.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-password">New Password (optional)</Label>
+                <Input id="edit-password" name="password" type="password" placeholder="Leave blank to keep current password" onChange={handleEditFormChange} />
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsEditFormOpen(false)}>Cancel</Button>
+                <Button type="submit">Save Changes</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {selectedUser && (
+        <UserDetailsDialog
+          user={selectedUser}
+          open={isDetailsOpen}
+          onOpenChange={setIsDetailsOpen}
+          getTeamLeaderName={getTeamLeaderName}
         />
-    )}
+      )}
     </div>
   );
 }
@@ -670,161 +685,71 @@ export default function AssociatesPage() {
 
 
 
-// class AddFreelancerAPIView(APIView):
+
+
+
+
+// class ToggleUserActiveAPIView(APIView):
 //     """
-//     API to add Freelancer or IT Staff.
-//     Logic mirrors the 'add_freelancer' view.
-//     Access: Superuser OR Admin only.
-//     """
-//     permission_classes = [IsAuthenticated,CustomIsSuperuser , IsCustomAdminUser]
-//     parser_classes = [MultiPartParser, FormParser] # For handling file uploads
-
-//     def post(self, request, format=None):
-//         serializer = AddFreelancerSerializer(data=request.data, context={'request': request})
-        
-//         if serializer.is_valid():
-//             try:
-//                 staff_instance = serializer.save()
-                
-//                 # Activity Log (Optional - based on your style)
-//                 try:
-//                     user_type = "Super User" if request.user.is_superuser else "Admin User"
-//                     ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR'))
-//                     tagline = f"New Freelancer/Staff ({staff_instance.name}) added by {user_type}"
-                    
-//                     # Logic to find admin for log
-//                     admin_log = None
-//                     if request.user.is_admin:
-//                         admin_log = Admin.objects.filter(self_user=request.user).last()
-
-//                     ActivityLog.objects.create(
-//                         admin=admin_log, # Might be null if superuser
-//                         user=request.user if request.user.is_superuser else None,
-//                         description=tagline,
-//                         ip_address=ip,
-//                         email=request.user.email,
-//                         user_type=user_type,
-//                         activity_type="Freelancer Created",
-//                         name=request.user.name
-//                     )
-//                 except Exception:
-//                     pass # Log fail shouldn't stop the response
-
-//                 return Response({
-//                     "message": "Profile created successfully. Please wait for review.",
-//                     "data": StaffProfileSerializer(staff_instance).data
-//                 }, status=status.HTTP_201_CREATED)
-                
-//             except Exception as e:
-//                 return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
-//         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-
-
-
-
-
-// class AddFreelancerSerializer(serializers.ModelSerializer):
-//     # User model fields inputs
-//     password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
-//     user_type = serializers.ChoiceField(choices=['freelancer', 'it_staff'], write_only=True)
-//     profile_image = serializers.FileField(required=False, allow_null=True)
+//     API to toggle the 'user_active' status for Staff, Admin, or TeamLeader.
     
-//     # Referral code field (maps to join_referral in Staff)
-//     referral_code = serializers.CharField(source='join_referral', required=False, allow_blank=True)
+//     """
+//     permission_classes = [IsAuthenticated, CustomIsSuperuser  ] 
 
-//     class Meta:
-//         model = Staff
-//         fields = [
-//             'name', 'email', 'mobile', 'password', 'user_type', 'profile_image',
-//             'address', 'city', 'state', 'pincode', 'referral_code',
-//             'dob', 'pancard', 'aadharCard', 'degree', 
-//             'account_number', 'upi_id', 'bank_name', 'ifsc_code'
-//         ]
-//         extra_kwargs = {
-//             'email': {'required': True},
-//             'mobile': {'required': True},
-//             'pancard': {'required': True},     
-//             'aadharCard': {'required': True}   
-//         }
+//     def post(self, request, *args, **kwargs):
+//         user_id = request.data.get('user_id')
+//         user_type = request.data.get('user_type')
+//         is_active_str = request.data.get('is_active') 
 
-//     # --- VALIDATIONS START ---
-
-//     def validate_email(self, value):
-//         """Check if Email (Username) is unique in User model"""
-//         if User.objects.filter(email=value).exists():
-//             raise serializers.ValidationError("Email (Username) Already Exists.")
-//         return value
-
-//     def validate_mobile(self, value):
-//         """Check if Mobile is unique in Staff model"""
-//         if Staff.objects.filter(mobile=value).exists():
-//             raise serializers.ValidationError("Mobile Number Already Exists.")
-//         return value
-
-//     def validate_pancard(self, value):
-//         """Check if PAN Card is unique"""
-//         if value and Staff.objects.filter(pancard__iexact=value).exists():
-//             raise serializers.ValidationError("This PAN Card Number is already registered.")
-//         return value.upper() 
-
-//     def validate_aadharCard(self, value):
-//         """Check if Aadhar Card is unique"""
-//         if value and Staff.objects.filter(aadharCard=value).exists():
-//             raise serializers.ValidationError("This Aadhar Card Number is already registered.")
-//         return value
-
-//     # --- VALIDATIONS END ---
-
-//     def create(self, validated_data):
-//         # 1. Extract data
-//         password = validated_data.pop('password')
-//         user_type = validated_data.pop('user_type')
-//         profile_image = validated_data.pop('profile_image', None)
-        
-//         email = validated_data.get('email')
-//         name = validated_data.get('name')
-//         mobile = validated_data.get('mobile')
-
-//         # 2. Determine Flags based on user_type
-//         is_freelancer = False
-//         is_it_staff = False
-        
-//         if user_type == "freelancer":
-//             is_freelancer = True
-//         elif user_type == "it_staff":
-//             is_it_staff = True
-
-//         # 3. Create User
-//         try:
-//             user = User.objects.create_user(
-//                 username=email, 
-//                 email=email,
-//                 password=password,
-//                 name=name,
-//                 mobile=mobile,
-//                 profile_image=profile_image,
-//                 is_staff_new=True,
-//                 is_freelancer=is_freelancer,
-//                 is_it_staff=is_it_staff
+//         if not all([user_id, user_type, is_active_str is not None]):
+//             return Response(
+//                 {"error": "user_id (profile_id), user_type, aur is_active zaroori hain."},
+//                 status=status.HTTP_400_BAD_REQUEST
 //             )
-//         except Exception as e:
-//             raise serializers.ValidationError(f"Error creating user: {e}")
-
-//         # 4. Get Team Leader (Logic: Last created Team Leader)
-//         team_leader = Team_Leader.objects.filter().last()
         
-//         # 5. Create Staff Profile
+//         is_active_bool = str(is_active_str).lower() == 'true'
+        
+//         user_instance_email = None
 //         try:
-//             staff = Staff.objects.create(
-//                 team_leader=team_leader,
-//                 user=user,
-//                 **validated_data
+//             if user_type == 'staff':
+//                 profile = Staff.objects.get(id=user_id)
+//                 user_instance_email = profile.email
+//             elif user_type == 'admin':
+//                 profile = Admin.objects.get(id=user_id)
+//                 user_instance_email = profile.email
+//             elif user_type == 'teamlead':
+//                 profile = Team_Leader.objects.get(id=user_id)
+//                 user_instance_email = profile.email
+//             else:
+//                 return Response(
+//                     {"error": "Invalid user_type. Sirf 'staff', 'admin', ya 'teamlead' allowed hai."},
+//                     status=status.HTTP_400_BAD_REQUEST
+//                 )
+        
+//         except (Staff.DoesNotExist, Admin.DoesNotExist, Team_Leader.DoesNotExist):
+//              return Response(
+//                 {"error": f"Profile not found for user_type '{user_type}' with id {user_id}."},
+//                 status=status.HTTP_404_NOT_FOUND
 //             )
-//         except Exception as e:
-//             user.delete() # Rollback user if staff creation fails
-//             raise serializers.ValidationError(f"Error creating staff profile: {e}")
+        
+//         if not user_instance_email:
+//             return Response({"error": "Profile mil gayi lekin usse koi email linked nahi hai."}, status=status.HTTP_404_NOT_FOUND)
 
-//         return staff
+//         try:
+//             user_to_update = User.objects.get(email=user_instance_email)
+//             user_to_update.user_active = is_active_bool 
+//             user_to_update.save()
+            
+//             return Response(
+//                 {
+//                     'status': 'success', 
+//                     'user_email': user_to_update.email,
+//                     'user_active_is_now': user_to_update.user_active
+//                 },
+//                 status=status.HTTP_200_OK
+//             )
+//         except User.DoesNotExist:
+//             return Response(
+//                 {"error": f"User not found with email {user_instance_email}."},
+//                 status=status.HTTP_404_NOT_FOUND
+//            

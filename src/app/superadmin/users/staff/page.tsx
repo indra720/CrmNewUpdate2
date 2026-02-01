@@ -68,6 +68,7 @@ import {
   DollarSign,
   Minus,
   Plus,
+  EyeOff, // Added EyeOff
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
@@ -165,6 +166,7 @@ export default function StaffManagementPage() {
   const [activeTab, setActiveTab] = useState("personal");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
+  const [showPassword, setShowPassword] = useState(false); // Added showPassword state
 
   const { toast } = useToast();
   const [admins, setAdmins] = useState<any[]>([]);
@@ -207,9 +209,9 @@ export default function StaffManagementPage() {
         email: staff.email,
         mobile: staff.mobile,
         staff_id: staff.staff_id,
-        teamLeader: "N/A",
-        created_date: new Date().toISOString(),
-        self_user: { user_active: true },
+        teamLeader: "N/A", // This might need to be fetched separately if not part of staff object
+        created_date: staff.user?.created_date || null, // Use actual created_date from staff.user
+        self_user: { user_active: !!staff.user?.user_active }, // Correctly map user_active
       }));
 
       setUsers(staffUsers);
@@ -827,7 +829,28 @@ export default function StaffManagementPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                         <InputField id="name" label="Name" name="name" placeholder="John Doe" icon={User} value={formData.name} onChange={handleFormChange} />
                         <InputField id="email" label="E-Mail Address *" name="email" type="email" placeholder="you@example.com" icon={Mail} value={formData.email} onChange={handleFormChange} required />
-                        <InputField id="password" label="Password *" name="password" type="password" placeholder={formMode === 'edit' ? 'Leave blank to keep current password' : '••••••••'} icon={Lock} value={formData.password} onChange={handleFormChange} required={formMode === 'add'} />
+                        <div className="relative">
+                          <InputField
+                            id="password"
+                            label="Password *"
+                            name="password"
+                            type={showPassword ? "text" : "password"} // Dynamic type
+                            placeholder={formMode === 'edit' ? 'Leave blank to keep current password' : '••••••••'}
+                            icon={Lock}
+                            value={formData.password}
+                            onChange={handleFormChange}
+                            required={formMode === 'add'}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-9 h-8 w-8 text-muted-foreground"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          </Button>
+                        </div>
                         <InputField id="dob" label="Date of Birth" name="dob" type="date" icon={Calendar} value={formData.dob} onChange={handleFormChange} />
                         <InputField id="pancard" label="Pan Card" name="pancard" placeholder="ABCDE1234F" icon={CreditCard} value={formData.pancard} onChange={handleFormChange} />
                         <InputField id="aadharCard" label="Aadhar Card" name="aadharCard" placeholder="1234 5678 9012" icon={Fingerprint} value={formData.aadharCard} onChange={handleFormChange} />

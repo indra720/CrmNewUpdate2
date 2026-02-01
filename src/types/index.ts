@@ -1,6 +1,8 @@
 export type ProjectStatus = 'active' | 'planned' | 'completed' | 'on-hold';
 
 export interface Project {
+  members: any[];
+  team: boolean;
   id: number;
   name: string;
   slug: string;

@@ -68,6 +68,7 @@ import {
   Search,
   Minus,
   Plus,
+  EyeOff, // Added EyeOff
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
@@ -295,6 +296,7 @@ export default function AdminManagementPage() {
   const [activeTab, setActiveTab] = useState("personal");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [showPassword, setShowPassword] = useState(false); // Added showPassword state
 
   const { toast } = useToast();
 
@@ -332,7 +334,7 @@ export default function AdminManagementPage() {
       setcardData(data);
       const fetchedUsers = data.users.map((user: any) => ({
         ...user,
-        self_user: { user_active: user.user?.user_active }, // Correctly map from nested user object
+        self_user: { user_active: !!user.user?.user_active }, // Correctly map from nested user object
       }));
       setUsers(fetchedUsers);
     } catch (err: any) {
@@ -383,12 +385,19 @@ export default function AdminManagementPage() {
     setIsFormOpen(true);
   };
 
-  const handleOpenEditForm = (user: any) => {
-    setFormMode("edit");
-    setFormData(user);
-    setActiveTab("personal");
-    setIsFormOpen(true);
-  };
+const handleOpenEditForm = (user: any) => {
+  setFormMode("edit");
+
+  setFormData({
+    ...user,
+    // 👇 IMPORTANT: backend PATCH USER ID se hota hai
+    user_id: user.user_id || user.user?.id,
+  });
+
+  setActiveTab("personal");
+  setIsFormOpen(true);
+};
+
 
   const handleOpenDetailsView = (user: any) => {
     setSelectedUser(user);
@@ -487,19 +496,55 @@ export default function AdminManagementPage() {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.id) return;
+
     setIsSubmitting(true);
     const token = localStorage.getItem("authToken");
+
+    // Whitelist and map fields to match backend expectations.
+    const fieldsToUpdate: { [key: string]: any } = {
+      name: formData.name,
+      email: formData.email,
+      mobile: formData.mobile,
+      address: formData.address,
+      city: formData.city,
+      state: formData.state,
+      pincode: formData.pincode,
+      dob: formData.dob,
+      pancard: formData.pan_card,
+      aadharCard: formData.aadhar_card,
+      marksheet: formData.marksheets,
+      degree: formData.degree,
+      account_number: formData.account_number,
+      upi_id: formData.upi_id,
+      bank_name: formData.bank_name,
+      ifsc_code: formData.ifsc_code,
+      salary: formData.salary,
+    };
+    
+    // Only add password if it's not an empty string.
+    if (formData.password) {
+      fieldsToUpdate.password = formData.password;
+    }
+
     const data = new FormData();
-    Object.keys(formData).forEach((key) => {
-      if (key === "profile_image" && formData[key] instanceof File) {
-        data.append(key, formData[key]);
-      } else if (formData[key] !== null && formData[key] !== undefined) {
-        data.append(key, formData[key]);
+
+    // Append whitelisted fields to FormData, skipping any null, undefined, or empty values.
+    Object.keys(fieldsToUpdate).forEach((key) => {
+      const value = fieldsToUpdate[key];
+      if (value !== null && value !== undefined && value !== "") {
+        data.append(key, value);
       }
     });
+    
+    // Handle profile image file separately; only append if it's a new File.
+    if (formData.profile_image instanceof File) {
+      data.append("profile_image", formData.profile_image);
+    }
+
+    let response; // Declare response here
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/users/admin/edit/${formData.id}/`,
+      response = await fetch( // Assign to the declared response
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/users/admin/edit/${formData.user_id}/`,
         {
           method: "PATCH",
           headers: {
@@ -508,12 +553,36 @@ export default function AdminManagementPage() {
           body: data,
         }
       );
+
+      // --- ADD THIS LOG FOR DEBUGGING THE RAW RESPONSE ---
+      console.log("Raw API Response Object:", response);
+      // --- END ADDITION ---
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.message || `HTTP error! status: ${response.status}`
-        );
+        let errorMessage = `HTTP error! status: ${response.status} ${response.statusText}`;
+        let detailedError = "No additional error details available.";
+
+        // Attempt to parse response as JSON
+        const contentType = response.headers.get("Content-Type");
+        if (contentType && contentType.includes("application/json")) {
+          const errorData = await response.json();
+          detailedError = JSON.stringify(errorData, null, 2); // Pretty print JSON
+          errorMessage = errorData.detail || errorData.message || detailedError;
+        } else {
+          // If not JSON, read as text (likely HTML error page)
+          detailedError = await response.text();
+          // If the status is 500, it's an internal server error, the detailedError might be the full HTML traceback
+          if (response.status === 500) {
+              errorMessage = `Server responded with a 500 Internal Server Error. Full server response (HTML/Text) logged to console.`;
+          } else {
+              errorMessage = `Server responded with status ${response.status}. See console for details.`;
+          }
+        }
+
+        console.error("Backend error response (detailed):", detailedError);
+        throw new Error(errorMessage); // Throw the user-friendly message
       }
+
       setProgress(100);
       toast({
         title: "Admin Updated!",
@@ -526,11 +595,13 @@ export default function AdminManagementPage() {
         fetchcardData();
       }, 500);
     } catch (error: any) {
-      //console.error("Failed to update admin:", error);
+      // --- ENSURE THE INITIAL ERROR IS ALWAYS LOGGED CLEARLY ---
+      console.error("API call failed unexpectedly:", error);
+      // --- END ADDITION ---
       toast({
         title: "Error",
         description: `Failed to update admin: ${
-          error.message || "Unknown error"
+          error.message || "Unknown error occurred during API call."
         }`,
         variant: "destructive",
       });
@@ -933,17 +1004,28 @@ export default function AdminManagementPage() {
                           onChange={handleAddFormChange}
                           required
                         />
-                        <InputField
-                          id="password"
-                          label="Password"
-                          name="password"
-                          type="password"
-                          placeholder="••••••••"
-                          icon={Lock}
-                          value={formData.password}
-                          onChange={handleAddFormChange}
-                          required
-                        />
+                        <div className="relative">
+                          <InputField
+                            id="password"
+                            label="Password"
+                            name="password"
+                            type={showPassword ? "text" : "password"} // Dynamic type
+                            placeholder="••••••••"
+                            icon={Lock}
+                            value={formData.password}
+                            onChange={handleAddFormChange}
+                            required
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-9 h-8 w-8 text-muted-foreground"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          </Button>
+                        </div>
                         <InputField
                           id="dob"
                           label="Date of Birth"
@@ -1199,7 +1281,133 @@ export default function AdminManagementPage() {
 
 
 
-        
+
+// class AdminEditAPIView(APIView):
+//     """
+//     API to Get and Update an Admin profile.
+//     Special Feature: It auto-fixes incorrectly linked profiles via Email.
+//     """
+//     permission_classes = [IsAuthenticated, CustomIsSuperuser] 
+//     parser_classes = (MultiPartParser, FormParser)
+
+//     def get_object(self, id):
+//         """
+//         This method performs an AUTOMATIC FIX:
+//         1. Searches for Admin by User ID (from URL).
+//         2. If not found, checks by Email.
+//         3. If Email matches, it corrects the Admin's User link.
+//         """
+//         try:
+//             target_user = User.objects.get(id=id)
+
+//             try:
+//                 return Admin.objects.get(user=target_user)
             
-            
+//             except Admin.DoesNotExist:
+                
+//                 try:
+//                     # Find the Admin with the same email
+//                     broken_admin = Admin.objects.get(email=target_user.email)
+
+//                     # If found, fix the connection
+//                     # (It was previously wrongly linked to Superuser, now it will link to the correct ID)
+//                     broken_admin.user = target_user
+//                     broken_admin.save()
+
+//                     print(f" AUTO-FIXED: Admin '{broken_admin.name}' link is now corrected to User ID {target_user.id}!")
+//                     return broken_admin
+
+//                 except Admin.DoesNotExist:
+//                     # If not found by Email either, then the profile truly doesn't exist
+//                     raise Http404("Admin profile does not exist for this User.")
+                
+
+//         except User.DoesNotExist:
+//             raise Http404("Invalid User ID (User does not exist).")
+
+//     def get(self, request, id, *args, **kwargs):
+//         """
+//         Fetch full details of an Admin.
+//         """
+//         admin = self.get_object(id)
         
+//         serializer = DashboardAdminSerializer(admin)
+//         return Response(serializer.data, status=status.HTTP_200_OK)
+
+//     def patch(self, request, id, *args, **kwargs):
+//         """
+//         Update an Admin profile.
+//         """
+//         admin = self.get_object(id)
+        
+//         serializer = AdminUpdateSerializer(admin, data=request.data, partial=True)
+        
+//         if serializer.is_valid():
+//             updated_admin = serializer.save()
+            
+//             read_serializer = DashboardAdminSerializer(updated_admin)
+//             return Response(read_serializer.data, status=status.HTTP_200_OK)
+        
+//         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+
+
+
+
+// class AdminUpdateSerializer(serializers.ModelSerializer):
+    
+//     profile_image = serializers.FileField(required=False, allow_null=True, write_only=True)
+    
+//     password = serializers.CharField(
+//         write_only=True, 
+//         required=False, 
+//         style={'input_type': 'password'}
+//     )
+
+//     class Meta:
+//         model = Admin
+//         fields = [
+//             'name', 'email', 'mobile', 'address', 'city', 'state', 'pincode', 
+//             'dob', 'pancard', 'aadharCard', 'marksheet', 'degree', 
+//             'account_number', 'upi_id', 'bank_name', 'ifsc_code', 'salary',
+//             'profile_image', 'password' 
+//         ]
+//         extra_kwargs = {
+//             'email': {'required': False}
+//         }
+
+//     def update(self, instance, validated_data):
+        
+//         profile_image = validated_data.pop('profile_image', None)
+//         password = validated_data.pop('password', None) # Password nikaal liya
+        
+//         for attr, value in validated_data.items():
+//             setattr(instance, attr, value)
+
+//         if profile_image:
+//             instance.profile_image = profile_image
+            
+//         instance.save()
+        
+//         # --- User Table Update & Password Change ---
+//         user = instance.user
+//         if user:
+//             # Basic details sync karo
+//             user.email = validated_data.get('email', user.email)
+//             user.username = validated_data.get('email', user.username) # Email hi username hai
+//             user.name = validated_data.get('name', user.name)
+//             user.mobile = validated_data.get('mobile', user.mobile)
+            
+//             if profile_image:
+//                 user.profile_image = profile_image
+            
+//             # IMPORTANT: Password Change Logic
+//             if password:
+//                 user.set_password(password) # Password hash karke save karega
+                
+//             user.save()
+            
+//         return instance

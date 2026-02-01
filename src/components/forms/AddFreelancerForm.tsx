@@ -36,6 +36,8 @@ import {
   MapPin,
   ArrowLeft,
   ArrowRight,
+  Eye, // Added
+  EyeOff, // Added
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -70,6 +72,15 @@ const InputField = ({ id, label, name, type = 'text', placeholder, icon: Icon, v
   );
 };
 
+interface AddFreelancerFormProps {
+  isOpen: boolean;
+  onClose: () => void;
+  userType: 'freelancer' | 'it_staff';
+  onSuccess: () => void;
+  teamLeaders: any[];
+  admins: any[]; // Added admins prop
+}
+
 const initialFormData = {
   name: "",
   email: "",
@@ -89,23 +100,20 @@ const initialFormData = {
   upi_id: "",
   referral_code: "",
   user_type: "",
+  team_leader: "",
+  admin: "", // Added admin to initialFormData
 };
 
-interface AddFreelancerFormProps {
-  isOpen: boolean;
-  onClose: () => void;
-  userType: 'freelancer' | 'it_staff';
-  onSuccess: () => void;
-}
-
-export default function AddFreelancerForm({ isOpen, onClose, userType, onSuccess }: AddFreelancerFormProps) {
+export default function AddFreelancerForm({ isOpen, onClose, userType, onSuccess, teamLeaders, admins }: AddFreelancerFormProps) {
   const [formData, setFormData] = useState({ ...initialFormData, user_type: userType });
   const [activeTab, setActiveTab] = useState("personal");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // <-- Add state for password visibility
   const { toast } = useToast();
 
   useEffect(() => {
     setFormData({ ...initialFormData, user_type: userType });
+    setShowPassword(false); // Reset on open
   }, [isOpen, userType]);
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -199,9 +207,65 @@ export default function AddFreelancerForm({ isOpen, onClose, userType, onSuccess
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                       <InputField id="name" label="Name" name="name" placeholder="John Doe" icon={User} value={formData.name} onChange={handleFormChange} required/>
                       <InputField id="email" label="E-Mail Address" name="email" type="email" placeholder="you@example.com" icon={Mail} value={formData.email} onChange={handleFormChange} required />
-                      <InputField id="password" label="Password" name="password" type="password" placeholder="••••••••" icon={Lock} value={formData.password} onChange={handleFormChange} required />
+                      <div className="relative">
+                        <InputField
+                          id="password"
+                          label="Password"
+                          name="password"
+                          type={showPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          icon={Lock}
+                          value={formData.password}
+                          onChange={handleFormChange}
+                          required
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-1 top-9 h-8 w-8 text-muted-foreground"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </Button>
+                      </div>
                       <InputField id="mobile" label="Mobile" name="mobile" type="tel" placeholder="9876543210" icon={Phone} value={formData.mobile} onChange={handleFormChange} required />
-                      <InputField id="dob" label="Date of Birth" name="dob" type="date" icon={Calendar} value={formData.dob} onChange={handleFormChange} />
+                      {(userType === 'freelancer' || userType === 'it_staff') && ( // Only show team leader and admin for freelancers (associates) and IT Staff
+                        <>
+                          <div className="relative flex flex-col space-y-2">
+                            <Label htmlFor="team_leader_id" className="text-sm font-medium text-muted-foreground">Team Leader</Label>
+                            <Select onValueChange={(value) => handleSelectChange("team_leader_id", value)} name="team_leader_id" value={formData.team_leader_id}>
+                              <SelectTrigger id="team_leader_id" className="pl-3 pr-4 h-11">
+                                <Briefcase className="absolute left-1 top-10 h-5 w-5 text-muted-foreground text-gray-400 pointer-events-none" />
+                                <SelectValue placeholder="Select Team Leader" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {teamLeaders.map((leader) => (
+                                  <SelectItem key={leader.id} value={String(leader.id)}>
+                                    {leader.name || leader.email}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="relative flex flex-col space-y-2">
+                            <Label htmlFor="admin_id" className="text-sm font-medium text-muted-foreground">Admin</Label>
+                            <Select onValueChange={(value) => handleSelectChange("admin_id", value)} name="admin_id" value={formData.admin_id}>
+                              <SelectTrigger id="admin_id" className="pl-3 pr-4 h-11">
+                                <User className="absolute left-1 top-10 h-5 w-5  text-gray-400 pointer-events-none" />
+                                <SelectValue placeholder="Select Admin" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {admins.map((admin) => (
+                                  <SelectItem key={admin.id} value={String(admin.id)}>
+                                    {admin.name || admin.email}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </>
+                      )}
                       <InputField id="pancard" label="Pan Card" name="pancard" placeholder="ABCDE1234F" icon={CreditCard} value={formData.pancard} onChange={handleFormChange} required />
                       <InputField id="aadharCard" label="Aadhar Card" name="aadharCard" placeholder="1234 5678 9012" icon={Fingerprint} value={formData.aadharCard} onChange={handleFormChange} required />
                       <InputField id="degree" label="Degree" name="degree" placeholder="B.Tech, M.Sc" icon={GraduationCap} value={formData.degree} onChange={handleFormChange} />
@@ -264,3 +328,204 @@ export default function AddFreelancerForm({ isOpen, onClose, userType, onSuccess
     </Dialog>
   );
 }
+
+
+
+
+
+
+
+
+
+
+// class AddFreelancerAPIView(APIView):
+//     """
+//     API to add Freelancer or IT Staff.
+//     Access:
+//     - Superuser → selects admin → auto team leader
+//     - Admin → selects team leader
+//     - Team Leader → auto assigned
+//     """
+//     permission_classes = [IsSuperuserOrAdminOrTeamLeader]
+//     parser_classes = [MultiPartParser, FormParser]
+
+//     def post(self, request, format=None):
+//         serializer = AddFreelancerSerializer(
+//             data=request.data,
+//             context={'request': request}
+//         )
+
+//         if serializer.is_valid():
+//             staff_instance = serializer.save()
+
+//             # -------- Activity Log --------
+//             try:
+//                 if request.user.is_superuser:
+//                     user_type = "Super User"
+//                 elif getattr(request.user, "is_admin", False):
+//                     user_type = "Admin User"
+//                 else:
+//                     user_type = "Team Leader"
+
+//                 ip = request.META.get(
+//                     'HTTP_X_FORWARDED_FOR',
+//                     request.META.get('REMOTE_ADDR')
+//                 )
+
+//                 admin_log = None
+//                 if getattr(request.user, "is_admin", False):
+//                     admin_log = Admin.objects.filter(
+//                         self_user=request.user
+//                     ).last()
+
+//                 ActivityLog.objects.create(
+//                     admin=admin_log,
+//                     user=request.user if request.user.is_superuser else None,
+//                     description=f"New Freelancer/Staff ({staff_instance.name}) added by {user_type}",
+//                     ip_address=ip,
+//                     email=request.user.email,
+//                     user_type=user_type,
+//                     activity_type="Freelancer Created",
+//                     name=request.user.name
+//                 )
+//             except Exception:
+//                 pass
+
+//             return Response(
+//                 {
+//                     "message": "Profile created successfully. Please wait for review.",
+//                     "data": StaffProfileSerializer(staff_instance).data
+//                 },
+//                 status=status.HTTP_201_CREATED
+//             )
+
+//         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+
+
+
+
+// class AddFreelancerSerializer(serializers.ModelSerializer):
+//     password = serializers.CharField(write_only=True, required=True)
+//     user_type = serializers.ChoiceField(
+//         choices=['freelancer', 'it_staff'],
+//         write_only=True
+//     )
+//     profile_image = serializers.FileField(required=False, allow_null=True)
+
+//     # ONLY for SUPERUSER
+//     admin_id = serializers.IntegerField(required=False, write_only=True)
+
+//     # ONLY for ADMIN
+//     team_leader_id = serializers.IntegerField(required=False, write_only=True)
+
+//     referral_code = serializers.CharField(
+//         source='join_referral',
+//         required=False,
+//         allow_blank=True
+//     )
+
+//     class Meta:
+//         model = Staff
+//         fields = [
+//             'name', 'email', 'mobile', 'password', 'user_type', 'profile_image',
+//             'admin_id', 'team_leader_id',
+//             'address', 'city', 'state', 'pincode',
+//             'referral_code', 'dob', 'pancard', 'aadharCard', 'degree',
+//             'account_number', 'upi_id', 'bank_name', 'ifsc_code'
+//         ]
+
+//     # ---------------- CREATE ---------------- #
+
+//     def create(self, validated_data):
+//         request = self.context.get("request")
+
+//         password = validated_data.pop("password")
+//         user_type = validated_data.pop("user_type")
+//         profile_image = validated_data.pop("profile_image", None)
+
+//         admin_id = validated_data.pop("admin_id", None)
+//         team_leader_id = validated_data.pop("team_leader_id", None)
+
+//         # ---------------- USER FLAGS ---------------- #
+//         is_freelancer = user_type == "freelancer"
+//         is_it_staff = user_type == "it_staff"
+
+//         # ---------------- CREATE USER ---------------- #
+//         user = User.objects.create_user(
+//             username=validated_data["email"],
+//             email=validated_data["email"],
+//             password=password,
+//             name=validated_data.get("name"),
+//             mobile=validated_data.get("mobile"),
+//             profile_image=profile_image,
+//             is_staff_new=True,
+//             is_freelancer=is_freelancer,
+//             is_it_staff=is_it_staff
+//         )
+
+//         # ---------------- ASSIGN TEAM LEADER ---------------- #
+//         team_leader = None
+
+//         # CASE 1️⃣ SUPERUSER
+//         if request.user.is_superuser:
+//             if not admin_id:
+//                 raise serializers.ValidationError(
+//                     {"admin_id": "Admin selection is required for superuser"}
+//                 )
+
+//             admin = Admin.objects.filter(id=admin_id).first()
+//             if not admin:
+//                 raise serializers.ValidationError(
+//                     {"admin_id": "Invalid admin selected"}
+//                 )
+
+//             team_leader = Team_Leader.objects.filter(admin=admin).last()
+//             if not team_leader:
+//                 raise serializers.ValidationError(
+//                     {"team_leader": "No team leader found for this admin"}
+//                 )
+
+//         # CASE 2️⃣ ADMIN
+//         elif getattr(request.user, "is_admin", False):
+//             if not team_leader_id:
+//                 raise serializers.ValidationError(
+//                     {"team_leader_id": "Team leader selection is required"}
+//                 )
+
+//             team_leader = Team_Leader.objects.filter(
+//                 id=team_leader_id,
+//                 admin__self_user=request.user
+//             ).first()
+
+//             if not team_leader:
+//                 raise serializers.ValidationError(
+//                     {"team_leader_id": "Invalid team leader selected"}
+//                 )
+
+//         # CASE 3️⃣ TEAM LEADER
+//         elif getattr(request.user, "is_team_leader", False):
+//             team_leader = Team_Leader.objects.filter(
+//                 self_user=request.user
+//             ).first()
+
+//             if not team_leader:
+//                 raise serializers.ValidationError(
+//                     "Team leader profile not found"
+//                 )
+
+//         else:
+//             raise serializers.ValidationError("Unauthorized role")
+
+//         # ---------------- CREATE STAFF ---------------- #
+//         staff = Staff.objects.create(
+//             user=user,
+//             team_leader=team_leader,
+//             **validated_data
+//         )
+
+//         return staff
+

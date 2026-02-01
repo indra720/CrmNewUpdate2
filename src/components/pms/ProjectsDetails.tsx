@@ -1,29 +1,26 @@
 'use client';
 
-import { mockProjects, mockProjectMembers, mockTasks, mockActivities } from '@/lib/mockData'; // Import mockTasks and mockActivities
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ArrowLeft, DollarSign, Calendar, Users, Briefcase, MoreHorizontal, CheckSquare, ListTodo, Activity, GanttChart, SquareStack, CheckCircle, MessageSquare, PlusCircle } from 'lucide-react'; // Added activity-related icons
+import { ArrowLeft, DollarSign, Calendar, Users, Briefcase, MoreHorizontal, CheckSquare, ListTodo, Activity, GanttChart, SquareStack, CheckCircle, MessageSquare, PlusCircle, Pencil, Trash2, Archive } from 'lucide-react'; // Added activity-related icons
 import { Button } from '@/components/ui/button';
 import { AddProjectMemberDialog } from '../forms/AddProjectMemberDialog';
 import { AddProjectTaskDialog } from '../forms/AddProjectTaskDialog';
 import { TaskRow } from './TaskRow'; // Import TaskRow
+import { EditProjectDialog } from '../forms/EditProject';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation'; // Import useRouter for redirection
 import TaskDetailsDialog from './TaskDetailsDialog';
-import { formatDistanceToNowStrict } from 'date-fns'; // Import for date formatting
-
-
-// Helper to get a single project by slug
-const getProjectBySlug = (slug: string) => {
-  return mockProjects.find(p => p.slug === slug);
-};
+import { formatDistanceToNowStrict } from 'date-fns';
+import { Project } from '@/types';
+import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast'; // Import useToast
 
 // Helper to get icon for activity type
 const getActivityIcon = (type: string) => {
@@ -58,24 +55,147 @@ interface ProjectTask {
 
 interface ProjectDetailsPageProps {
   params: {
-    slug: string;
+    id: string;
   };
 }
 
-// The page component
 export default function ProjectDetails({ params }: ProjectDetailsPageProps) {
-  const project = getProjectBySlug(params.slug);
-  
-  // If no project is found, render a 404 page
-  if (!project) {
-    notFound();
+  const [project, setProject] = useState<Project | null>(null);
+  const [members, setMembers] = useState<any[]>([]);
+  const [currentProjectTasks, setCurrentProjectTasks] = useState<ProjectTask[]>([]);
+  const [projectActivities, setProjectActivities] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isTaskViewOpen, setIsTaskViewOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const router = useRouter(); // Initialize router
+  const { toast } = useToast(); // Initialize toast
+
+  const fetchProjectById = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const token = localStorage.getItem('authToken');
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/projects/${params.id}/`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Token ${token}`,
+          },
+        }
+      );
+
+      if (response.status === 404) {
+        notFound();
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch project');
+      }
+
+      const data = await response.json();
+
+      setProject({
+        ...data,
+        startDate: data.start_date,
+        endDate: data.end_date,
+      });
+
+      setMembers(data.members || []);
+      setCurrentProjectTasks(data.tasks || []);
+      setProjectActivities(data.activities || []);
+
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [params.id]);
+
+  useEffect(() => {
+    fetchProjectById();
+  }, [fetchProjectById]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [dropdownRef]);
+
+  // --- DELETE FUNCTION ---
+  const handleDeleteProject = async () => {
+    if (!project) return;
+
+    const confirmDeletion = window.confirm(
+      `Are you sure you want to delete "${project.name}"? This action cannot be undone.`
+    );
+
+    if (!confirmDeletion) {
+      return;
+    }
+
+    setIsLoading(true);
+    const token = localStorage.getItem('authToken');
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/projects/${project.id}/`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Token ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to delete project');
+      }
+
+      toast({
+        title: 'Project Deleted',
+        description: `'${project.name}' has been successfully deleted.`,
+      });
+
+      router.push('/admin/project/all');
+
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: `Failed to delete project: ${error.message}`,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+  if (isLoading && !project) {
+    return <div className="text-center py-12">Loading project details...</div>;
   }
 
-  const members = mockProjectMembers.filter(m => m.projectId === project.id);
-  const [currentProjectTasks, setCurrentProjectTasks] = useState<ProjectTask[]>(() =>
-    mockTasks.filter(task => task.projectId === project.id)
-  );
+  if (error) {
+    return <div className="text-center py-12 text-red-500">Error: {error}</div>;
+  }
 
+  if (!project) {
+    return <div className="text-center py-12">Project not found.</div>;
+  }
+  
   const onTaskAdd = (newTaskData: {
     title: string;
     description?: string;
@@ -89,19 +209,19 @@ export default function ProjectDetails({ params }: ProjectDetailsPageProps) {
     const member = members.find(m => m.name === newTaskData.assignee);
 
     const fullTask: ProjectTask = {
-        id: Math.floor(Math.random() * 100000), // number
-        projectId: project.id,
-        title: newTaskData.title,
-        status: statusMap[newTaskData.status] || 'todo', // mapped status
-        priority: newTaskData.priority,
-        deadline: newTaskData.dueDate.toISOString().split("T")[0], // string
-        assigneeId: member ? member.id : 'unassigned', // string
-        description: newTaskData.description,
-        tags: newTaskData.tags ? newTaskData.tags.split(',').map(tag => tag.trim()) : [],
+      id: Math.floor(Math.random() * 100000),
+      projectId: project.id,
+      title: newTaskData.title,
+      status: statusMap[newTaskData.status] || 'todo',
+      priority: newTaskData.priority,
+      deadline: newTaskData.dueDate.toISOString().split("T")[0],
+      assigneeId: member ? member.id : 'unassigned',
+      description: newTaskData.description,
+      tags: newTaskData.tags ? newTaskData.tags.split(',').map(tag => tag.trim()) : [],
     };
     setCurrentProjectTasks(prevTasks => [fullTask, ...prevTasks]);
   };
-  const projectActivities = mockActivities.filter(activity => activity.projectId === project.id); // Filter activities for this project
+
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -115,8 +235,7 @@ export default function ProjectDetails({ params }: ProjectDetailsPageProps) {
   const totalTasks = currentProjectTasks.length;
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : project.progress || 0;
 
-  const [isTaskViewOpen, setIsTaskViewOpen] = useState(false);
-  const [selectedTask, setSelectedTask] = useState(null);
+
 
   const handleViewTask = (task: any) => {
     setSelectedTask(task);
@@ -132,12 +251,11 @@ export default function ProjectDetails({ params }: ProjectDetailsPageProps) {
     );
   };
 
-
   return (
     <div className="space-y-6">
       {/* Back Link */}
-      <Link 
-        href="/admin/project/all" 
+      <Link
+        href="/admin/project/all"
         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
@@ -155,7 +273,7 @@ export default function ProjectDetails({ params }: ProjectDetailsPageProps) {
             <p className="text-muted-foreground mt-2 max-w-2xl">
               {project.description}
             </p>
-            
+
             <div className="flex items-center gap-6 mt-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
@@ -168,18 +286,28 @@ export default function ProjectDetails({ params }: ProjectDetailsPageProps) {
             </div>
           </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon">
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => alert('Edit Project')}>Edit Project</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => alert('Archive Project')}>Archive Project</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => alert('Delete Project')} className="text-red-600">Delete Project</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="relative" ref={dropdownRef}>
+            <Button variant="outline" size="icon" disabled={isLoading} onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
+              <MoreHorizontal className="w-4 h-4" />
+            </Button>
+            {isDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-auto bg-card border rounded-md shadow-lg z-10">
+                <div className="p-1">
+                  <EditProjectDialog project={project} onProjectUpdated={fetchProjectById}>
+                    <div className="flex items-center justify-center hover:bg-muted rounded-md cursor-pointer h-8 w-8">
+                      <Pencil className="h-4 w-4" />
+                    </div>
+                  </EditProjectDialog>
+                  {/* <div className="flex items-center justify-center hover:bg-muted rounded-md cursor-pointer h-8 w-8" onClick={() => alert('Archive Project')}>
+                    <Archive className="h-4 w-4" />
+                  </div> */}
+                  <div className="flex items-center justify-center hover:bg-destructive/10 text-red-600 rounded-md cursor-pointer h-8 w-8" onClick={handleDeleteProject}>
+                    <Trash2 className="h-4 w-4" />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Progress */}
@@ -237,9 +365,9 @@ export default function ProjectDetails({ params }: ProjectDetailsPageProps) {
             <div className="bg-card rounded-xl border border-border">
               {currentProjectTasks.length > 0 ? (
                 currentProjectTasks.map((task) => (
-                  <TaskRow 
-                    key={task.id} 
-                    task={task} 
+                  <TaskRow
+                    key={task.id}
+                    task={task}
                     onViewTask={() => handleViewTask(task)}
                     onStatusChange={(newStatus: 'To Do' | 'In Progress' | 'Done') => handleTaskStatusChange(task.id, newStatus)}
                   />

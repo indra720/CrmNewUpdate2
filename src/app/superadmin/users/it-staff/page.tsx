@@ -25,9 +25,11 @@ import {
   Plus,
   Minus,
   MoreVertical,
+  EyeOff,
+  Eye,
 } from "lucide-react";
 import { AttendanceDialog } from "./attendance-dialog";
-import { toggleUserActiveStatus } from "@/lib/api";
+import { toggleUserActiveStatus, fetchTeamLeaders, fetchAdminsForSelection } from "@/lib/api";
 import { toast, useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import {
@@ -38,6 +40,13 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,6 +69,9 @@ export default function ItStaffPage() {
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any | null>(null);
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
+  const [teamLeaders, setTeamLeaders] = useState<any[]>([]);
+  const [admins, setAdmins] = useState<any[]>([]);
+  const [showPassword, setShowPassword] = useState(false); // Added showPassword state
 
   const { toast } = useToast();
 
@@ -87,8 +99,12 @@ export default function ItStaffPage() {
       const data = await response.json();
       const usersWithSelfUser = data.map((user: any) => ({
         ...user,
-        self_user: user.self_user || { user_active: user.active !== false },
+        created_date: user.date_joined || null, // Assuming date_joined might exist or be null
+        team_leader: user.team_leader || null, // Assuming team_leader might exist or be null
+        self_user: { user_active: !!user.active } // Correctly map user.active to a boolean
       }));
+
+
       setUsers(usersWithSelfUser);
     } catch (error) {
       //console.error("Error fetching IT staff:", error);
@@ -96,20 +112,38 @@ export default function ItStaffPage() {
   }, []);
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    async function loadData() {
+      await fetchUsers();
+      try {
+        const [leaders, adminsData] = await Promise.all([
+          fetchTeamLeaders(),
+          fetchAdminsForSelection()
+        ]);
+        setTeamLeaders(leaders);
+        setAdmins(adminsData);
+      } catch (error) {
+        //console.error("Failed to fetch team leaders:", error);
+        toast({
+          title: "Error",
+          description: "Could not fetch team leaders or admins.",
+          variant: "destructive",
+        });
+      }
+    }
+    loadData();
+  }, [fetchUsers, toast]);
 
   const handleToggle = async (id: number, isActive: boolean) => {
     const originalUsers = [...users];
 
     // Optimistic UI update
-          setUsers(prev =>
-            prev.map(user =>
-              user.id === id
-                ? { ...user, self_user: { ...(user.self_user || {}), user_active: isActive } }
-                : user
-            )
-          );
+    setUsers(prev =>
+      prev.map(user =>
+        user.id === id
+          ? { ...user, self_user: { ...(user.self_user || {}), user_active: isActive } }
+          : user
+      )
+    );
     try {
       await toggleUserActiveStatus(id, "staff", isActive);
 
@@ -126,6 +160,127 @@ export default function ItStaffPage() {
       toast({
         title: "Error",
         description: "Failed to update user status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleOpenEditForm = async (user: any) => {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Authentication token not found.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/users/staff/edit/${user.id}/`, {
+
+        headers: {
+
+          Authorization: `Token ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const staffData = await response.json();
+
+      setEditingUser({
+        id: staffData.id,
+        name: staffData.name || "",
+        email: staffData.email || "",
+        mobile: staffData.mobile || "",
+        team_leader_id: staffData.team_leader_id || "", // Changed to team_leader_id
+        admin_id: staffData.admin_id || "", // Changed to admin_id
+      });
+
+      setIsEditFormOpen(true);
+    } catch (error: any) {
+      //console.error("Error fetching staff data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch staff data for editing.",
+        variant: "destructive",
+      });
+    }
+  }
+
+  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setEditingUser({ ...editingUser, [name]: value });
+  };
+
+  const handleEditSelectChange = (name: string, value: string) => {
+    setEditingUser({ ...editingUser, [name]: value });
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+
+    if (!editingUser.name || !editingUser.email || !editingUser.mobile || !editingUser.admin_id || !editingUser.team_leader_id) {
+      toast({
+        title: "Validation Error",
+        description: "Name, Email, Mobile, Admin, and Team Leader are required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      toast({
+        title: "Error",
+        description: "Authentication token not found.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const data = new FormData();
+    if (editingUser.name) data.append("name", editingUser.name);
+    if (editingUser.email) data.append("email", editingUser.email);
+    if (editingUser.mobile) data.append("mobile", editingUser.mobile);
+    if (editingUser.team_leader_id) data.append("team_leader_id", editingUser.team_leader_id); // Changed to team_leader_id
+    if (editingUser.admin_id) data.append("admin_id", editingUser.admin_id); // Changed to admin_id
+    if (editingUser.password) data.append("password", editingUser.password);
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/users/staff/edit/${editingUser.id}/`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Token ${token}`,
+        },
+        body: data,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error("Failed to update IT Staff.");
+      }
+
+      const updatedUser = await response.json();
+      setUsers(users.map((u: any) => u.id === editingUser.id ? { ...u, ...updatedUser } : u));
+
+      toast({
+        title: "IT Staff Updated!",
+        description: `${editingUser.name} has been updated successfully.`,
+        className: "bg-green-500 text-white"
+      });
+
+      setIsEditFormOpen(false);
+      setEditingUser(null);
+      fetchUsers(); // Re-fetch users to get the latest data
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update IT Staff.",
         variant: "destructive",
       });
     }
@@ -307,33 +462,105 @@ export default function ItStaffPage() {
             </DialogHeader>
             <form onSubmit={handleEditSubmit} className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-name">Name</Label>
-                <Input
-                  id="edit-name"
-                  name="name"
-                  value={editingUser.name}
-                  onChange={handleEditFormChange}
-                  required
-                />
-              </div>
-              <div className="space-y-2 ">
-                <Label htmlFor="edit-mobile">Mobile</Label>
-                <Input
-                  id="edit-mobile"
-                  name="mobile"
-                  value={editingUser.mobile}
-                  onChange={handleEditFormChange}
-                  required
-                />
-              </div>
-              <DialogFooter className="gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsEditFormOpen(false)}
+                <Label>Admin *</Label>
+                <Select
+                  value={editingUser.admin_id?.toString()}
+                  onValueChange={(value) =>
+                    setEditingUser({ ...editingUser, admin_id: value })
+                  }
                 >
-                  Cancel
-                </Button>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Admin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {admins.map((admin) => (
+                      <SelectItem key={admin.id} value={String(admin.id)}>
+                        {admin.name || admin.user?.email || `Admin ${admin.id}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Team Leader *</Label>
+                <Select
+                  value={editingUser.team_leader_id?.toString()}
+                  onValueChange={(value) =>
+                    setEditingUser({ ...editingUser, team_leader_id: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Team Leader" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamLeaders.map((leader) => (
+                      <SelectItem key={leader.id} value={String(leader.id)}>
+                        {leader.name || leader.user?.email || `Leader ${leader.id}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Name</Label>
+                <Input id="edit-name" name="name" value={editingUser.name} onChange={handleEditFormChange} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email</Label>
+                <Input id="edit-email" name="email" type="email" value={editingUser.email} onChange={handleEditFormChange} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-mobile">Mobile</Label>
+                <Input id="edit-mobile" name="mobile" value={editingUser.mobile} onChange={handleEditFormChange} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-admin_id">Admin</Label>
+                <Select onValueChange={(value) => handleEditSelectChange("admin_id", value)} name="admin_id" value={editingUser.admin_id?.toString()} required>
+                  <SelectTrigger id="edit-admin_id">
+                    <SelectValue placeholder="Select Admin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {admins.map((admin) => (
+                      <SelectItem key={admin.id} value={String(admin.id)}>
+                        {admin.name || admin.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-team_leader_id">Team Leader</Label>
+                <Select onValueChange={(value) => handleEditSelectChange("team_leader_id", value)} name="team_leader_id" value={editingUser.team_leader_id?.toString()} required>
+                  <SelectTrigger id="edit-team_leader_id">
+                    <SelectValue placeholder="Select Team Leader" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamLeaders.map((leader) => (
+                      <SelectItem key={leader.id} value={String(leader.id)}>
+                        {leader.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-password">New Password (optional)</Label>
+                <div className="relative">
+                  <Input id="edit-password" name="password" type={showPassword ? "text" : "password"} placeholder="Leave blank to keep current password" onChange={handleEditFormChange} />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </Button>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsEditFormOpen(false)}>Cancel</Button>
                 <Button type="submit">Save Changes</Button>
               </DialogFooter>
             </form>
@@ -352,6 +579,8 @@ export default function ItStaffPage() {
         onClose={() => setIsAddFormOpen(false)}
         userType="it_staff"
         onSuccess={fetchUsers}
+        teamLeaders={teamLeaders}
+        admins={admins}
       />
     </div>
   );

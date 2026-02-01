@@ -1,26 +1,17 @@
-'use client'
+'use client';
+
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { CalendarIcon, Plus } from 'lucide-react';
-import { format } from 'date-fns';
+import { Plus } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -28,219 +19,193 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 
-const projectSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name must be less than 100 characters'),
-  description: z.string().min(10, 'Description must be at least 10 characters').max(500, 'Description must be less than 500 characters'),
-  status: z.enum(['planned', 'active', 'completed', 'on-hold']),
-  startDate: z.date({ required_error: 'Start date is required' }),
-  endDate: z.date({ required_error: 'End date is required' }),
-}).refine((data) => data.endDate > data.startDate, {
-  message: "End date must be after start date",
-  path: ["endDate"],
-});
-
-type ProjectFormValues = z.infer<typeof projectSchema>;
-
-interface CreateProjectDialogProps {
-  trigger?: React.ReactNode;
-  onProjectCreated?: (project: ProjectFormValues) => void;
-}
-
-export function CreateProjectDialog({ trigger, onProjectCreated }: CreateProjectDialogProps) {
-  const [open, setOpen] = useState(false);
+export function CreateProjectDialog() {
   const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  // State to manage loading status during API call
+  const [isLoading, setIsLoading] = useState(false);
 
-  const form = useForm<ProjectFormValues>({
-    resolver: zodResolver(projectSchema),
-    defaultValues: {
-      name: '',
-      description: '',
-      status: 'planned',
-    },
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    status: 'planned',
+    startDate: '',
+    endDate: '',
   });
 
-  const onSubmit = (data: ProjectFormValues) => {
-    console.log('Project created:', data);
+  const handleChange = (name: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
-    toast({
-      title: "Project Created",
-      description: `"${data.name}" has been created successfully.`,
-    });
+  // The function is now 'async' to allow using 'await' for the API call
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true); // Disable button and show loading text
 
-    onProjectCreated?.(data);
-    form.reset();
-    setOpen(false);
+    // --- Validation Section ---
+    if (!formData.name.trim()) {
+      toast({
+        title: "Error",
+        description: "Project Name cannot be empty.",
+        variant: "destructive"
+      });
+      setIsLoading(false);
+      return;
+    }
+    if (!formData.startDate) {
+      toast({
+        title: "Error",
+        description: "Start Date is required.",
+        variant: "destructive"
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    // --- API Integration Section ---
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+    const API_ENDPOINT = `${API_BASE_URL}/api/projects/projects/`;
+
+    // Prepare the data in the format the API expects
+    const postData = {
+      name: formData.name,
+      description: formData.description || null,
+      start_date: formData.startDate,
+      end_date: formData.endDate || null,
+      status: formData.status,
+      is_deleted: false,
+      is_active: true,
+    };
+
+    const token = localStorage.getItem('authToken');
+
+
+    try {
+      // Use 'fetch' to send the POST request
+      const response = await fetch(API_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // If your API requires a token, add it here like this:
+          'Authorization': `Token ${token}`,
+        },
+        body: JSON.stringify(postData), // Convert JS object to JSON string
+      });
+
+      // Check if the request was successful
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.log("Backend 400 Error:", errorData);
+
+        throw new Error(
+          Object.values(errorData).flat().join(" ")
+        );
+      }
+
+
+      const result = await response.json();
+      console.log('Project created successfully:', result);
+
+      toast({
+        title: 'Project Created',
+        description: `${formData.name} created successfully.`,
+      });
+
+      // Reset form and close the modal on success
+      setFormData({
+        name: '',
+        description: '',
+        status: 'planned',
+        startDate: '',
+        endDate: '',
+      });
+      setOpen(false);
+
+    } catch (error: any) {
+      // Handle any errors that occurred during the fetch
+      console.error('Error creating project:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to create project: ${error.message || 'Something went wrong.'}`,
+        variant: 'destructive',
+      });
+    } finally {
+      // This will run whether the request succeeded or failed
+      setIsLoading(false); // Re-enable the button
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || (
-          <Button className="gap-2">
-            <Plus className="w-4 h-4" />
-            New Project
-          </Button>
-        )}
+        <Button className="gap-2">
+          <Plus className="h-4 w-4" />
+          New Project
+        </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] w-[calc(100%-1rem)] h-[90vh] overflow-y-auto hide-scrollbar">
+
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Create New Project</DialogTitle>
-          <DialogDescription>
-            Add a new project to your workspace. Fill in the details below.
-          </DialogDescription>
+          <DialogTitle>Create Project</DialogTitle>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 ">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Project Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter project name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+
+          <Input
+            placeholder="Project name"
+            value={formData.name}
+            onChange={(e) => handleChange('name', e.target.value)}
+            required
+          />
+
+          <Textarea
+            placeholder="Project description"
+            value={formData.description}
+            onChange={(e) => handleChange('description', e.target.value)}
+          />
+
+          <Select
+            value={formData.status}
+            onValueChange={(v) => handleChange('status', v)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="planned">Planned</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="on-hold">On Hold</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              type="date"
+              value={formData.startDate}
+              onChange={(e) => handleChange('startDate', e.target.value)}
+              required
             />
 
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Describe your project..."
-                      className="resize-none"
-                      rows={3}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+            <Input
+              type="date"
+              value={formData.endDate}
+              onChange={(e) => handleChange('endDate', e.target.value)}
             />
+          </div>
 
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="planned">Planned</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="on-hold">On Hold</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="startDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Start Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? format(field.value, "MMM d, yyyy") : "Pick a date"}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="endDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>End Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? format(field.value, "MMM d, yyyy") : "Pick a date"}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Create Project</Button>
-            </div>
-          </form>
-        </Form>
+          <div className="flex justify-end gap-3 pt-3">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
+              Cancel
+            </Button>
+            {/* Disable button and change text when loading */}
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? 'Creating...' : 'Create Project'}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

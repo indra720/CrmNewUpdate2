@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { format } from "date-fns";
+
 import {
   Card,
   CardContent,
@@ -30,11 +31,11 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -70,6 +71,8 @@ import {
   DollarSign,
   Search,
   X,
+  EyeOff,
+  
 } from 'lucide-react';
 
 import { Label } from '@/components/ui/label';
@@ -86,34 +89,34 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { useToast } from '@/hooks/use-toast';
 
 const initialFormData = {
-    id: null,
-    name: "",
-    email: "",
-    password: "",
-    mobile: "",
-    dob: "",
-    address: "",
-    city: "",
-    state: "",
-    pincode: "",
-    degree: "",
-    pancard: "",
-    aadharCard: "",
-    bank_name: "",
-    account_number: "",
-    ifsc_code: "",
-    upi_id: "",
-    salary: "",
-    referralCode: "",
-    team_leader: "",
-    admin: "",
+  id: null,
+  name: "",
+  email: "",
+  password: "",
+  mobile: "",
+  dob: "",
+  address: "",
+  city: "",
+  state: "",
+  pincode: "",
+  degree: "",
+  pancard: "",
+  aadharCard: "",
+  bank_name: "",
+  account_number: "",
+  ifsc_code: "",
+  upi_id: "",
+  salary: "",
+  referralCode: "",
+  team_leader: "",
+  admin: "",
 };
 
 
 
 const KpiCard = ({ title, value, icon, color, link }: { title: string, value: string | number, icon: React.ElementType, color: string, link?: string }) => {
   const cardContent = (
-     <Card className="shadow-lg rounded-2xl hover:shadow-xl transition-shadow duration-300">
+    <Card className="shadow-lg rounded-2xl hover:shadow-xl transition-shadow duration-300">
       <CardContent className="p-3 flex flex-col items-center justify-center text-center">
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 260, damping: 20 }} className={`text-3xl ${color} mb-1`}>
           {React.createElement(icon, { className: "h-6 w-6" })}
@@ -132,38 +135,38 @@ const KpiCard = ({ title, value, icon, color, link }: { title: string, value: st
 };
 
 const InputField = ({ id, label, name, type = 'text', placeholder, icon: Icon, value, onChange, required, children, disabled }: {
-    id: string;
-    label: string;
-    name: string;
-    type?: string;
-    placeholder?: string;
-    icon?: React.ElementType;
-    value: string | number;
-    onChange: (e: any) => void;
-    required?: boolean;
-    children?: React.ReactElement;
-    disabled?: boolean;
+  id: string;
+  label: string;
+  name: string;
+  type?: string;
+  placeholder?: string;
+  icon?: React.ElementType;
+  value: string | number;
+  onChange: (e: any) => void;
+  required?: boolean;
+  children?: React.ReactElement;
+  disabled?: boolean;
 }) => {
-    const inputElement = children ? 
-        React.cloneElement(children, { id, name, value, onChange, required, placeholder, disabled }) :
-        <Input type={type} id={id} name={name} value={value as string} onChange={onChange} required={required} placeholder={placeholder} className="pl-10 pr-4 h-11" disabled={disabled} />;
+  const inputElement = children ?
+    React.cloneElement(children, { id, name, value, onChange, required, placeholder, disabled }) :
+    <Input type={type} id={id} name={name} value={value as string} onChange={onChange} required={required} placeholder={placeholder} className="pl-10 pr-4 h-11" disabled={disabled} />;
 
-    return (
-        <div className="relative flex flex-col space-y-2">
-            <Label htmlFor={id} className="text-sm font-medium text-muted-foreground">{label}</Label>
-            <div className="relative">
-                {Icon && <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />}
-                {inputElement}
-            </div>
-        </div>
-    );
+  return (
+    <div className="relative flex flex-col space-y-2">
+      <Label htmlFor={id} className="text-sm font-medium text-muted-foreground">{label}</Label>
+      <div className="relative">
+        {Icon && <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />}
+        {inputElement}
+      </div>
+    </div>
+  );
 };
 
 const ReviewDetailItem = ({ label, value }: { label: string, value: string | undefined | null }) => (
-    <div>
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="font-medium text-foreground">{value || 'N/A'}</p>
-    </div>
+  <div>
+    <p className="text-sm text-muted-foreground">{label}</p>
+    <p className="font-medium text-foreground">{value || 'N/A'}</p>
+  </div>
 );
 
 export default function StaffManagementPage() {
@@ -193,11 +196,14 @@ export default function StaffManagementPage() {
 
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-    const [isFilterActive, setIsFilterActive] = useState(false);
-      const [isLoading, setIsLoading] = useState(true);
-      const [error, setError] = useState<string | null>(null);
-    
-      const { toast } = useToast();
+  const [isFilterActive, setIsFilterActive] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+
+  const [showPassword, setShowPassword] = useState(false);
+
+  const { toast } = useToast();
   const kpiData = [
     { title: "Total Leads", valueKey: "total_leads", icon: Users, color: "text-rose-500", link: "/admin/reports/total-leads?source=staff" },
     { title: "Total Visit", valueKey: "total_visits_leads", icon: Eye, color: "text-green-500", link: "/admin/reports/visit?source=staff" },
@@ -212,22 +218,23 @@ export default function StaffManagementPage() {
   const handleAddFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     if (type === 'file') {
-        const target = e.target as HTMLInputElement;
-        setFormData({ ...formData, [name]: target.files ? target.files[0] : null });
+      const target = e.target as HTMLInputElement;
+      setFormData({ ...formData, [name]: target.files ? target.files[0] : null });
     } else {
-        setFormData({ ...formData, [name]: value });
+      setFormData({ ...formData, [name]: value });
     }
   };
-  
+
   const handleAddFormSelectChange = (name: string, value: string) => {
     //console.log(`Setting ${name} to ${value}`);
     setFormData({ ...formData, [name]: value });
   };
-  
+
   const handleOpenAddForm = () => {
     setFormData(initialFormData);
     setActiveTab("personal");
     setIsAddFormOpen(true);
+    setShowPassword(false); // Reset password visibility on add form open
   }
 
   const handleOpenEditForm = (user: any) => {
@@ -240,7 +247,7 @@ export default function StaffManagementPage() {
     setIsAddFormOpen(false);
     setFormData(initialFormData);
   }
-  
+
   const loadStaffReport = async (start?: string, end?: string) => {
     setIsLoading(true);
     setError(null);
@@ -261,7 +268,7 @@ export default function StaffManagementPage() {
       const data = await fetchAdminTeamLeaders();
       const teamLeadersList = data.team_leaders_list || [];
       setTeamLeaders(teamLeadersList);
-      
+
       const adminList = teamLeadersList.map((tl: any) => tl.admin).filter((admin: any, index: number, self: any[]) => admin && self.findIndex(a => a.id === admin.id) === index);
       setAdmins(adminList);
 
@@ -295,7 +302,7 @@ export default function StaffManagementPage() {
       }
     }
   };
-  
+
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     //console.log("Form Data on submit:", formData);
@@ -327,7 +334,7 @@ export default function StaffManagementPage() {
 
       if (!response.ok) {
         if (response.status === 415) {
-             throw new Error('Unsupported Media Type: The server rejected the request format. This is an unexpected error.');
+          throw new Error('Unsupported Media Type: The server rejected the request format. This is an unexpected error.');
         }
         const errorData = await response.json();
         const errorMessages = Object.entries(errorData).map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`).join('; ');
@@ -356,8 +363,8 @@ export default function StaffManagementPage() {
     const { name, value } = e.target;
     setEditingUser({ ...editingUser, [name]: value });
   };
-  
-    const handleEditSelectChange = (name: string, value: string) => {
+
+  const handleEditSelectChange = (name: string, value: string) => {
     setEditingUser({ ...editingUser, [name]: value });
   };
 
@@ -397,7 +404,7 @@ export default function StaffManagementPage() {
 
       if (!response.ok) {
         if (response.status === 415) {
-             throw new Error('Unsupported Media Type: The server rejected the request format. This is an unexpected error.');
+          throw new Error('Unsupported Media Type: The server rejected the request format. This is an unexpected error.');
         }
         const errorData = await response.json();
         const errorMessages = Object.entries(errorData).map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`).join('; ');
@@ -455,7 +462,7 @@ export default function StaffManagementPage() {
       if (!response.ok) {
         throw new Error(result.error || 'Failed to update status.');
       }
-      
+
       // Sync with server state
       setUsers(prevUsers => prevUsers.map(u => u.id === userId ? { ...u, is_active: result.user_active } : u));
 
@@ -488,7 +495,7 @@ export default function StaffManagementPage() {
         val.toString().toLowerCase().includes(search.trim().toLowerCase())
     )
   );
-  
+
   const tabAnimation = {
     initial: { x: '100%', opacity: 0 },
     animate: { x: 0, opacity: 1 },
@@ -497,49 +504,49 @@ export default function StaffManagementPage() {
 
   return (
     <div className="space-y-6">
-        <h1 className="text-2xl font-bold tracking-tight">Staff Users</h1>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {kpiData.map((card, index) => (
-                <KpiCard 
-                  key={index} 
-                  title={card.title} 
-                  value={kpiCounts[card.valueKey as keyof typeof kpiCounts] || 0}
-                  icon={card.icon}
-                  color={card.color}
-                  link={card.link}
-                />
-            ))}
-        </div>
+      <h1 className="text-2xl font-bold tracking-tight">Staff Users</h1>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        {kpiData.map((card, index) => (
+          <KpiCard
+            key={index}
+            title={card.title}
+            value={kpiCounts[card.valueKey as keyof typeof kpiCounts] || 0}
+            icon={card.icon}
+            color={card.color}
+            link={card.link}
+          />
+        ))}
+      </div>
 
       <Card className="shadow-lg rounded-2xl">
         <CardHeader className="p-4">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-              <div className="flex flex-1 flex-col gap-4 md:flex-row md:items-center">
-                <div className="grid flex-shrink-0 grid-cols-1 sm:grid-cols-2 gap-2">
-                  <DatePicker date={startDate} setDate={setStartDate} />
-                  <DatePicker date={endDate} setDate={setEndDate} />
-                </div>
-                <div className="relative w-full md:w-auto md:flex-1 lg:flex-none lg:w-64">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Search..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="pl-10 w-full"
-                    />
-                </div>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+            <div className="flex flex-1 flex-col gap-4 md:flex-row md:items-center">
+              <div className="grid flex-shrink-0 grid-cols-1 sm:grid-cols-2 gap-2">
+                <DatePicker date={startDate} setDate={setStartDate} />
+                <DatePicker date={endDate} setDate={setEndDate} />
               </div>
-              <div className="flex gap-2 self-end lg:self-center">
-                <Button variant={isFilterActive ? "destructive" : "outline"} onClick={handleFilterClick}>
-                    {isFilterActive ? <X className="h-4 w-4 md:mr-2" /> : <Filter className="h-4 w-4 md:mr-2" />}
-                    <span className="hidden md:inline">{isFilterActive ? "Clear" : "Filter"}</span>
-                </Button>
-                <Button onClick={handleOpenAddForm}>
-                    <PlusCircle className="h-4 w-4" />
-                    <span className="hidden md:inline ml-2">Add Staff</span>
-                </Button>
+              <div className="relative w-full md:w-auto md:flex-1 lg:flex-none lg:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10 w-full"
+                />
               </div>
             </div>
+            <div className="flex gap-2 self-end lg:self-center">
+              <Button variant={isFilterActive ? "destructive" : "outline"} onClick={handleFilterClick}>
+                {isFilterActive ? <X className="h-4 w-4 md:mr-2" /> : <Filter className="h-4 w-4 md:mr-2" />}
+                <span className="hidden md:inline">{isFilterActive ? "Clear" : "Filter"}</span>
+              </Button>
+              <Button onClick={handleOpenAddForm}>
+                <PlusCircle className="h-4 w-4" />
+                <span className="hidden md:inline ml-2">Add Staff</span>
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -593,8 +600,8 @@ export default function StaffManagementPage() {
                         <TableCell className="hidden md:table-cell">
                           <Link href={`/admin/leads/staff`}>
                             <Button variant="outline" size="sm" className="text-green-600 border-green-600 hover:bg-green-100 hover:text-green-700">
-                                <Eye className="h-4 w-4 mr-2" />
-                                <span className="hidden sm:inline">View</span>
+                              <Eye className="h-4 w-4 mr-2" />
+                              <span className="hidden sm:inline">View</span>
                             </Button>
                           </Link>
                         </TableCell>
@@ -621,23 +628,23 @@ export default function StaffManagementPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        size="icon"
-                                        onClick={() => handleOpenEditForm(user)}
-                                        className="h-8 w-8"
-                                    >
-                                        <Pencil className="h-4 w-4" />
-                                        <span className="sr-only">Edit</span>
-                                    </Button>
-                                 </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Edit</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() => handleOpenEditForm(user)}
+                                  className="h-8 w-8"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                  <span className="sr-only">Edit</span>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Edit</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </TableCell>
                       </TableRow>
                       {expandedRowId === user.id && (
@@ -743,248 +750,244 @@ export default function StaffManagementPage() {
         </CardContent>
       </Card>
 
-    <Dialog open={isAddFormOpen} onOpenChange={setIsAddFormOpen}>
+      <Dialog open={isAddFormOpen} onOpenChange={setIsAddFormOpen}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] p-0 rounded-2xl shadow-2xl flex flex-col">
-            <DialogHeader className="p-6 pb-4 border-b flex-shrink-0">
-                <DialogTitle className="text-xl font-bold">Add New Staff</DialogTitle>
-                <DialogDescription>
-                    Fill in the details below.
-                </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleAddSubmit} className="flex-1 flex flex-col min-h-0">
-                <div className="px-6 pt-4 flex gap-4">
-                    <Select onValueChange={(value) => handleAddFormSelectChange("admin", value)} name="admin" defaultValue={formData.admin}>
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select Admin" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {admins.map(admin => (
-                            <SelectItem key={admin.id} value={String(admin.id)}>{admin.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                    </Select>
-                    <Select onValueChange={(value) => handleAddFormSelectChange("team_leader", value)} name="team_leader" defaultValue={formData.team_leader}>
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select Team-Leader" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {teamLeaders.map(tl => (
-                            <SelectItem key={tl.id} value={String(tl.id)}>{tl.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-                  <div className="px-6 pt-4 flex-shrink-0">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="personal">Personal Details</TabsTrigger>
-                        <TabsTrigger value="account">Account Details</TabsTrigger>
-                    </TabsList>
-                  </div>
-                 <div className="p-6 overflow-y-auto flex-1 relative hide-scrollbar">
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={activeTab}
-                        initial={tabAnimation.initial}
-                        animate={tabAnimation.animate}
-                        exit={tabAnimation.exit}
-                        transition={{ duration: 0.3 }}
-                        className="w-full"
-                      >
-                        {activeTab === 'personal' && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                              <InputField id="name" label="Name" name="name" placeholder="John Doe" icon={User} value={formData.name} onChange={handleAddFormChange} required />
-                              <InputField id="email" label="E-Mail Address" name="email" type="email" placeholder="you@example.com" icon={Mail} value={formData.email} onChange={handleAddFormChange} required />
-                              <InputField id="password" label="Password" name="password" type="password" placeholder="••••••••" icon={Lock} value={formData.password} onChange={handleAddFormChange} required />
+          <DialogHeader className="p-6 pb-4 border-b flex-shrink-0">
+            <DialogTitle className="text-xl font-bold">Add New Staff</DialogTitle>
+            <DialogDescription>
+              Fill in the details below.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddSubmit} className="flex-1 flex flex-col min-h-0">
+            <div className="px-6 pt-4 flex gap-4">
+              <Select onValueChange={(value) => handleAddFormSelectChange("admin", value)} name="admin" defaultValue={formData.admin}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Admin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {admins.map(admin => (
+                    <SelectItem key={admin.id} value={String(admin.id)}>{admin.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select onValueChange={(value) => handleAddFormSelectChange("team_leader", value)} name="team_leader" defaultValue={formData.team_leader}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Team-Leader" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teamLeaders.map(tl => (
+                    <SelectItem key={tl.id} value={String(tl.id)}>{tl.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+              <div className="px-6 pt-4 flex-shrink-0">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="personal">Personal Details</TabsTrigger>
+                  <TabsTrigger value="account">Account Details</TabsTrigger>
+                </TabsList>
+              </div>
+              <div className="p-6 overflow-y-auto flex-1 relative hide-scrollbar">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeTab}
+                    initial={tabAnimation.initial}
+                    animate={tabAnimation.animate}
+                    exit={tabAnimation.exit}
+                    transition={{ duration: 0.3 }}
+                    className="w-full"
+                  >
+                    {activeTab === 'personal' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                        <InputField id="name" label="Name" name="name" placeholder="John Doe" icon={User} value={formData.name} onChange={handleAddFormChange} required />
+                        <InputField id="email" label="E-Mail Address" name="email" type="email" placeholder="you@example.com" icon={Mail} value={formData.email} onChange={handleAddFormChange} required />
+                        <div className="relative">
+                          <InputField id="password" label="Password" name="password" type={showPassword ? "text" : "password"} placeholder="••••••••" icon={Lock} value={formData.password} onChange={handleAddFormChange} required />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-9 h-8 w-8 text-muted-foreground"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          </Button>
+                        </div>
 
-                              <InputField id="dob" label="Date of Birth" name="dob" type="date" icon={Calendar} value={formData.dob} onChange={handleAddFormChange} />
-                              <InputField id="pancard" label="Pan Card" name="pancard" placeholder="ABCDE1234F" icon={CreditCard} value={formData.pancard} onChange={handleAddFormChange} />
-                              <InputField id="aadharCard" label="Aadhar Card" name="aadharCard" placeholder="1234 5678 9012" icon={Fingerprint} value={formData.aadharCard} onChange={handleAddFormChange} />
-                              <InputField id="degree" label="Degree" name="degree" placeholder="B.Tech, M.Sc" icon={GraduationCap} value={formData.degree} onChange={handleAddFormChange} />
-                              <InputField id="city" label="City" name="city" placeholder="e.g. Mumbai" icon={Building2} value={formData.city} onChange={handleAddFormChange} />
-                              <InputField id="state" label="State" name="state" value={formData.state} onChange={handleAddFormChange}>
-                                <Select onValueChange={(value) => handleAddFormSelectChange("state", value)} name="state" defaultValue={formData.state}>
-                                    <SelectTrigger className="pl-10 pr-4 h-11">
-                                    <SelectValue placeholder="Select State" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                    <SelectItem value="Rajasthan">Rajasthan</SelectItem>
-                                    <SelectItem value="Maharashtra">Maharashtra</SelectItem>
-                                    <SelectItem value="Gujarat">Gujarat</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                              </InputField>
-                              <InputField id="mobile" label="Mobile" name="mobile" type="tel" placeholder="9876543210" icon={Phone} value={formData.mobile} onChange={handleAddFormChange} required />
-                              <InputField id="salary" label="Salary" name="salary" placeholder="e.g. 50000" icon={Wallet} value={formData.salary} onChange={handleAddFormChange} />
-                          </div>
-                        )}
-                        {activeTab === 'account' && (
-                           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                              <InputField id="account_number" label="Account Number" name="account_number" placeholder="Your account number" icon={Wallet} value={formData.account_number} onChange={handleAddFormChange} />
-                              <InputField id="upi_id" label="Add UPI" name="upi_id" placeholder="yourname@upi" icon={Briefcase} value={formData.upi_id} onChange={handleAddFormChange} />
-                              <InputField id="bank_name" label="Bank Name" name="bank_name" placeholder="e.g. State Bank of India" icon={Landmark} value={formData.bank_name} onChange={handleAddFormChange} />
-                              <InputField id="ifsc_code" label="IFSC Code" name="ifsc_code" placeholder="SBIN0001234" icon={Hash} value={formData.ifsc_code} onChange={handleAddFormChange} />
-                              <InputField id="pincode" label="Pincode" name="pincode" placeholder="e.g. 110001" icon={MapPin} value={formData.pincode} onChange={handleAddFormChange} />
-                              <div className="md:col-span-2">
-                                <InputField id="address" label="Address" name="address" value={formData.address} onChange={handleAddFormChange}>
-                                   <Textarea className="pl-10 pr-4 min-h-[80px]" placeholder="Enter full address" />
-                                </InputField>
-                              </div>
-                           </div>
-                        )}
-                      </motion.div>
-                    </AnimatePresence>
-                  </div>
-                <DialogFooter className="p-6 pt-4 border-t bg-muted/50 flex justify-between w-full flex-shrink-0">
-                  {activeTab === 'personal' ? (
-                      <div></div>
-                    ) : (
-                      <Button type="button" variant="outline" onClick={() => setActiveTab('personal')}>
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Previous
-                      </Button>
+                        <InputField id="dob" label="Date of Birth" name="dob" type="date" icon={Calendar} value={formData.dob} onChange={handleAddFormChange} />
+                        <InputField id="pancard" label="Pan Card" name="pancard" placeholder="ABCDE1234F" icon={CreditCard} value={formData.pancard} onChange={handleAddFormChange} />
+                        <InputField id="aadharCard" label="Aadhar Card" name="aadharCard" placeholder="1234 5678 9012" icon={Fingerprint} value={formData.aadharCard} onChange={handleAddFormChange} />
+                        <InputField id="degree" label="Degree" name="degree" placeholder="B.Tech, M.Sc" icon={GraduationCap} value={formData.degree} onChange={handleAddFormChange} />
+                        <InputField id="city" label="City" name="city" placeholder="e.g. Mumbai" icon={Building2} value={formData.city} onChange={handleAddFormChange} />
+                        <InputField id="state" label="State" name="state" value={formData.state} onChange={handleAddFormChange}>
+                          <Select onValueChange={(value) => handleAddFormSelectChange("state", value)} name="state" defaultValue={formData.state}>
+                            <SelectTrigger className="pl-10 pr-4 h-11">
+                              <SelectValue placeholder="Select State" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Rajasthan">Rajasthan</SelectItem>
+                              <SelectItem value="Maharashtra">Maharashtra</SelectItem>
+                              <SelectItem value="Gujarat">Gujarat</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </InputField>
+                        <InputField id="mobile" label="Mobile" name="mobile" type="tel" placeholder="9876543210" icon={Phone} value={formData.mobile} onChange={handleAddFormChange} required />
+                        <InputField id="salary" label="Salary" name="salary" placeholder="e.g. 50000" icon={Wallet} value={formData.salary} onChange={handleAddFormChange} />
+                      </div>
                     )}
-                    {activeTab === 'personal' ? (
-                      <Button type="button" onClick={(e) => { e.preventDefault(); setActiveTab('account'); }}>
-                        Next
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <Button type="submit">Save Staff</Button>
+                    {activeTab === 'account' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                        <InputField id="account_number" label="Account Number" name="account_number" placeholder="Your account number" icon={Wallet} value={formData.account_number} onChange={handleAddFormChange} />
+                        <InputField id="upi_id" label="Add UPI" name="upi_id" placeholder="yourname@upi" icon={Briefcase} value={formData.upi_id} onChange={handleAddFormChange} />
+                        <InputField id="bank_name" label="Bank Nae" name="bank_name" placeholder="e.g. State Bank of India" icon={Landmark} value={formData.bank_name} onChange={handleAddFormChange} />
+                        <InputField id="ifsc_code" label="IFSC Code" name="ifsc_code" placeholder="SBIN0001234" icon={Hash} value={formData.ifsc_code} onChange={handleAddFormChange} />
+                        <InputField id="pincode" label="Pincode" name="pincode" placeholder="e.g. 110001" icon={MapPin} value={formData.pincode} onChange={handleAddFormChange} />
+                        <div className="md:col-span-2">
+                          <InputField id="address" label="Address" name="address" value={formData.address} onChange={handleAddFormChange}>
+                            <Textarea className="pl-10 pr-4 min-h-[80px]" placeholder="Enter full address" />
+                          </InputField>
+                        </div>
+                      </div>
                     )}
-                </DialogFooter>
-              </Tabs>
-            </form>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+              <DialogFooter className="p-6 pt-4 border-t bg-muted/50 flex justify-between w-full flex-shrink-0">
+                {activeTab === 'personal' ? (
+                  <div></div>
+                ) : (
+                  <Button type="button" variant="outline" onClick={() => setActiveTab('personal')}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Previous
+                  </Button>
+                )}
+                {activeTab === 'personal' ? (
+                  <Button type="button" onClick={(e) => { e.preventDefault(); setActiveTab('account'); }}>
+                    Next
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button type="submit">Save Staff</Button>
+                )}
+              </DialogFooter>
+            </Tabs>
+          </form>
         </DialogContent>
-    </Dialog>
+      </Dialog>
 
-    {editingUser && (
-      <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] p-0 rounded-2xl shadow-2xl flex flex-col">
+      {editingUser && (
+        <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
+          <DialogContent className="sm:max-w-3xl max-h-[90vh] p-0 rounded-2xl shadow-2xl flex flex-col">
             <DialogHeader className="p-6 pb-4 border-b flex-shrink-0">
-                <DialogTitle className="text-xl font-bold">Edit Staff</DialogTitle>
-                <DialogDescription>
-                    Update the details for {editingUser.name}.
-                </DialogDescription>
+              <DialogTitle className="text-xl font-bold">Edit Staff</DialogTitle>
+              <DialogDescription>
+                Update the details for {editingUser.name}.
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleEditSubmit} className="flex-1 flex flex-col min-h-0">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-                  <div className="px-6 pt-4 flex-shrink-0">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="personal">Personal Details</TabsTrigger>
-                        <TabsTrigger value="account">Account Details</TabsTrigger>
-                    </TabsList>
-                  </div>
-                 <div className="p-6 overflow-y-auto flex-1 relative hide-scrollbar">
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={activeTab}
-                        initial={tabAnimation.initial}
-                        animate={tabAnimation.animate}
-                        exit={tabAnimation.exit}
-                        transition={{ duration: 0.3 }}
-                        className="w-full"
-                      >
-                        {activeTab === 'personal' && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                              <InputField id="name" label="Name" name="name" placeholder="John Doe" icon={User} value={editingUser.name} onChange={handleEditFormChange} required />
-                              <InputField id="email" label="E-Mail Address" name="email" type="email" placeholder="you@example.com" icon={Mail} value={editingUser.email} onChange={handleEditFormChange} required />
-                              <InputField id="password" label="Password" name="password" type="password" placeholder="Leave unchanged" icon={Lock} value={editingUser.password} onChange={handleEditFormChange} />
-                               <InputField id="teamLeader" label="Team Leader" name="team_leader" value={editingUser.team_leader} onChange={handleEditFormChange}>
-                                <Select onValueChange={(value) => handleEditSelectChange("team_leader", value)} name="team_leader" defaultValue={editingUser.team_leader}>
-                                    <SelectTrigger className="pl-10 pr-4 h-11">
-                                    <SelectValue placeholder="Select Team Leader" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {teamLeaders.map(tl => (
-                                        <SelectItem key={tl.id} value={String(tl.id)}>{tl.name}</SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                </Select>
-                              </InputField>
-                              <InputField id="dob" label="Date of Birth" name="dob" type="date" icon={Calendar} value={editingUser.dob} onChange={handleEditFormChange} />
-                              <InputField id="pancard" label="Pan Card" name="pancard" placeholder="ABCDE1234F" icon={CreditCard} value={editingUser.pancard} onChange={handleEditFormChange} />
-                              <InputField id="aadharCard" label="Aadhar Card" name="aadharCard" placeholder="1234 5678 9012" icon={Fingerprint} value={editingUser.aadharCard} onChange={handleEditFormChange} />
-                              <InputField id="degree" label="Degree" name="degree" placeholder="B.Tech, M.Sc" icon={GraduationCap} value={editingUser.degree} onChange={handleEditFormChange} />
-                              <InputField id="city" label="City" name="city" placeholder="e.g. Mumbai" icon={Building2} value={editingUser.city} onChange={handleEditFormChange} />
-                              <InputField id="state" label="State" name="state" value={editingUser.state} onChange={handleEditFormChange}>
-                                <Select onValueChange={(value) => handleEditSelectChange("state", value)} name="state" defaultValue={editingUser.state}>
-                                    <SelectTrigger className="pl-10 pr-4 h-11">
-                                    <SelectValue placeholder="Select State" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                    <SelectItem value="Rajasthan">Rajasthan</SelectItem>
-                                    <SelectItem value="Maharashtra">Maharashtra</SelectItem>
-                                    <SelectItem value="Gujarat">Gujarat</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                              </InputField>
-                              <InputField id="mobile" label="Mobile" name="mobile" type="tel" placeholder="9876543210" icon={Phone} value={editingUser.mobile} onChange={handleEditFormChange} required />
-                              <InputField id="salary" label="Salary" name="salary" placeholder="e.g. 50000" icon={Wallet} value={editingUser.salary} onChange={handleEditFormChange} />
+                <div className="px-6 pt-4 flex-shrink-0">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="personal">Personal Details</TabsTrigger>
+                    <TabsTrigger value="account">Account Details</TabsTrigger>
+                  </TabsList>
+                </div>
+                <div className="p-6 overflow-y-auto flex-1 relative hide-scrollbar">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeTab}
+                      initial={tabAnimation.initial}
+                      animate={tabAnimation.animate}
+                      exit={tabAnimation.exit}
+                      transition={{ duration: 0.3 }}
+                      className="w-full"
+                    >
+                      {activeTab === 'personal' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                          <InputField id="name" label="Name" name="name" placeholder="John Doe" icon={User} value={editingUser.name} onChange={handleEditFormChange} required />
+                          <InputField id="email" label="E-Mail Address" name="email" type="email" placeholder="you@example.com" icon={Mail} value={editingUser.email} onChange={handleEditFormChange} required />
+                          <div className="relative">
+                            <InputField id="password" label="Password" name="password" type={showPassword ? "text" : "password"} placeholder="Leave unchanged" icon={Lock} value={editingUser.password} onChange={handleEditFormChange} />
+                            <Button onClick={() => setShowPassword(!showPassword)} type="button" variant='ghost' size='icon' className=' absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground'>
+                              {showPassword ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
+                            </Button>
+
                           </div>
-                        )}
-                        {activeTab === 'account' && (
-                           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                              <InputField id="account_number" label="Account Number" name="account_number" placeholder="Your account number" icon={Wallet} value={editingUser.account_number} onChange={handleEditFormChange} />
-                              <InputField id="upi_id" label="Add UPI" name="upi_id" placeholder="yourname@upi" icon={Briefcase} value={editingUser.upi_id} onChange={handleEditFormChange} />
-                              <InputField id="bank_name" label="Bank Name" name="bank_name" placeholder="e.g. State Bank of India" icon={Landmark} value={editingUser.bank_name} onChange={handleEditFormChange} />
-                              <InputField id="ifsc_code" label="IFSC Code" name="ifsc_code" placeholder="SBIN0001234" icon={Hash} value={editingUser.ifsc_code} onChange={handleEditFormChange} />
-                              <InputField id="pincode" label="Pincode" name="pincode" placeholder="e.g. 110001" icon={MapPin} value={editingUser.pincode} onChange={handleEditFormChange} />
-                              <div className="md:col-span-2">
-                                <InputField id="address" label="Address" name="address" value={editingUser.address} onChange={handleEditFormChange}>
-                                   <Textarea className="pl-10 pr-4 min-h-[80px]" placeholder="Enter full address" />
-                                </InputField>
-                              </div>
-                           </div>
-                        )}
-                      </motion.div>
-                    </AnimatePresence>
-                  </div>
+
+                          <InputField id="teamLeader" label="Team Leader" name="team_leader" value={editingUser.team_leader} onChange={handleEditFormChange}>
+                            <Select onValueChange={(value) => handleEditSelectChange("team_leader", value)} name="team_leader" defaultValue={editingUser.team_leader}>
+                              <SelectTrigger className="pl-10 pr-4 h-11">
+                                <SelectValue placeholder="Select Team Leader" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {teamLeaders.map(tl => (
+                                  <SelectItem key={tl.id} value={String(tl.id)}>{tl.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </InputField>
+                          <InputField id="dob" label="Date of Birth" name="dob" type="date" icon={Calendar} value={editingUser.dob} onChange={handleEditFormChange} />
+                          <InputField id="pancard" label="Pan Card" name="pancard" placeholder="ABCDE1234F" icon={CreditCard} value={editingUser.pancard} onChange={handleEditFormChange} />
+                          <InputField id="aadharCard" label="Aadhar Card" name="aadharCard" placeholder="1234 5678 9012" icon={Fingerprint} value={editingUser.aadharCard} onChange={handleEditFormChange} />
+                          <InputField id="degree" label="Degree" name="degree" placeholder="B.Tech, M.Sc" icon={GraduationCap} value={editingUser.degree} onChange={handleEditFormChange} />
+                          <InputField id="city" label="City" name="city" placeholder="e.g. Mumbai" icon={Building2} value={editingUser.city} onChange={handleEditFormChange} />
+                          <InputField id="state" label="State" name="state" value={editingUser.state} onChange={handleEditFormChange}>
+                            <Select onValueChange={(value) => handleEditSelectChange("state", value)} name="state" defaultValue={editingUser.state}>
+                              <SelectTrigger className="pl-10 pr-4 h-11">
+                                <SelectValue placeholder="Select State" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Rajasthan">Rajasthan</SelectItem>
+                                <SelectItem value="Maharashtra">Maharashtra</SelectItem>
+                                <SelectItem value="Gujarat">Gujarat</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </InputField>
+                          <InputField id="mobile" label="Mobile" name="mobile" type="tel" placeholder="9876543210" icon={Phone} value={editingUser.mobile} onChange={handleEditFormChange} required />
+                          <InputField id="salary" label="Salary" name="salary" placeholder="e.g. 50000" icon={Wallet} value={editingUser.salary} onChange={handleEditFormChange} />
+                        </div>
+                      )}
+                      {activeTab === 'account' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                          <InputField id="account_number" label="Account Number" name="account_number" placeholder="Your account number" icon={Wallet} value={editingUser.account_number} onChange={handleEditFormChange} />
+                          <InputField id="upi_id" label="Add UPI" name="upi_id" placeholder="yourname@upi" icon={Briefcase} value={editingUser.upi_id} onChange={handleEditFormChange} />
+                          <InputField id="bank_name" label="Bank Name" name="bank_name" placeholder="e.g. State Bank of India" icon={Landmark} value={editingUser.bank_name} onChange={handleEditFormChange} />
+                          <InputField id="ifsc_code" label="IFSC Code" name="ifsc_code" placeholder="SBIN0001234" icon={Hash} value={editingUser.ifsc_code} onChange={handleEditFormChange} />
+                          <InputField id="pincode" label="Pincode" name="pincode" placeholder="e.g. 110001" icon={MapPin} value={editingUser.pincode} onChange={handleEditFormChange} />
+                          <div className="md:col-span-2">
+                            <InputField id="address" label="Address" name="address" value={editingUser.address} onChange={handleEditFormChange}>
+                              <Textarea className="pl-10 pr-4 min-h-[80px]" placeholder="Enter full address" />
+                            </InputField>
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
                 <DialogFooter className="p-6 pt-4 border-t bg-muted/50 flex justify-between w-full flex-shrink-0">
                   {activeTab === 'personal' ? (
-                      <div></div>
-                    ) : (
-                      <Button type="button" variant="outline" onClick={() => setActiveTab('personal')}>
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Previous
-                      </Button>
-                    )}
-                    {activeTab === 'personal' ? (
-                      <Button type="button" onClick={(e) => { e.preventDefault(); setActiveTab('account'); }}>
-                        Next
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <Button type="submit">Save Changes</Button>
-                    )}
+                    <div></div>
+                  ) : (
+                    <Button type="button" variant="outline" onClick={() => setActiveTab('personal')}>
+                      <ArrowLeft className="mr-2 h-4 w-4" />
+                      Previous
+                    </Button>
+                  )}
+                  {activeTab === 'personal' ? (
+                    <Button type="button" onClick={(e) => { e.preventDefault(); setActiveTab('account'); }}>
+                      Next
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button type="submit">Save Changes</Button>
+                  )}
                 </DialogFooter>
               </Tabs>
             </form>
-        </DialogContent>
-      </Dialog>
-    )}
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-

@@ -5,7 +5,7 @@ import ProjectDetails from '@/components/pms/ProjectsDetails';
 // This defines the shape of the props the page will receive from Next.js
 interface ProjectDetailsPageProps {
   params: {
-    slug: string;
+    id: string;
   };
 }
 
