@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Bell, PanelLeft } from 'lucide-react';
+import { Bell, PanelLeft, Search } from 'lucide-react';
 import { Button } from '../ui/button';
 import { cn } from '@/lib/utils';
 import { UserNav } from '../user-nav';
@@ -18,6 +18,8 @@ import { Avatar, AvatarFallback } from '../ui/avatar';
 import { usePathname } from 'next/navigation';
 import { useMemo, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Input } from '../ui/input';
+import { useSearch } from '@/context/SearchContext';
 
 function getTitleFromPathname(pathname: string) {
   if (pathname === '/admin') return 'Admin Dashboard';
@@ -49,6 +51,24 @@ function getRoleFromPathname(pathname: string) {
   if (pathname.startsWith('/team-leader')) return 'team-leader';
   if (pathname.startsWith('/staff')) return 'staff';
   return '';
+}
+
+const SearchBar = () => {
+  const { searchQuery, setSearchQuery } = useSearch();
+  return (
+    <div className="relative w-full max-w-sm items-center">
+      <Input
+        type="search"
+        placeholder="Search..."
+        className="pl-10"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
+      <span className="absolute start-0 inset-y-0 flex items-center justify-center px-2">
+        <Search className="h-5 w-5 text-muted-foreground" />
+      </span>
+    </div>
+  )
 }
 
 export function Header({ setSidebarOpen, isCollapsed }: { setSidebarOpen?: (open: boolean) => void, isCollapsed?: boolean }) {
@@ -118,11 +138,17 @@ export function Header({ setSidebarOpen, isCollapsed }: { setSidebarOpen?: (open
         )}
 
         <div className="flex items-center gap-2">
-          <h1 className="text-lg md:text-xl font-semibold">{headerTitle}</h1>
+          <h1 className="text-lg hidden md:block md:text-xl font-semibold">{headerTitle}</h1>
+          <div className="block md:hidden">
+            <SearchBar />
+          </div>
         </div>
       </div>
 
       <div className="flex items-center gap-2 md:gap-4 ml-auto">
+        <div className="hidden md:block">
+            <SearchBar />
+        </div>
         <ThemeToggle />
 
         {/* NOTIFICATION BUTTON */}

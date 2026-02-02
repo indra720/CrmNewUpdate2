@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -37,7 +37,7 @@ type AddMemberFormValues = z.infer<typeof addMemberSchema>;
 interface AddTeamMemberDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onAddMember: (newMember: Omit<TeamMember, 'id' | 'projects' | 'tasksAssigned' | 'lastActivity'>) => void;
+  onAddMember: (newMember: Omit<TeamMember, 'id' | 'projects' | 'tasks' | 'tasksAssigned' | 'lastActivity'>) => void;
 }
 
 export function AddTeamMemberDialog({ isOpen, onOpenChange, onAddMember }: AddTeamMemberDialogProps) {
@@ -50,8 +50,8 @@ export function AddTeamMemberDialog({ isOpen, onOpenChange, onAddMember }: AddTe
     },
   });
 
-  const onSubmit = (data: AddMemberFormValues) => {
-    onAddMember(data); // Pass the new member data to the parent handler
+  const onSubmit: SubmitHandler<AddMemberFormValues> = (data) => {
+    onAddMember(data as Omit<TeamMember, 'id' | 'projects' | 'tasks' | 'tasksAssigned' | 'lastActivity'>); // Pass the new member data to the parent handler
     form.reset(); // Reset form fields
     onOpenChange(false); // Close the dialog
   };

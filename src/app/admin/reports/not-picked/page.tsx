@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { fetchAdminStaffLeadsKpiCountByTag, fetchAdminnStaffLeadsKpiCountByTag } from '@/lib/api';
 import { BackButton } from '@/components/ui/back-button';
+import { useSearch } from '@/context/SearchContext';
 
 type Lead = any;
 
@@ -36,6 +37,7 @@ function NotPickedLeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { searchQuery } = useSearch();
 
   useEffect(() => {
     async function fetchData() {
@@ -179,6 +181,10 @@ function NotPickedLeadsPage() {
     },
   });
 
+  useEffect(() => {
+    table.getColumn('name')?.setFilterValue(searchQuery);
+  }, [searchQuery, table]);
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-4">
@@ -192,15 +198,6 @@ function NotPickedLeadsPage() {
 
             <div className="flex items-center justify-between mb-4 px-2 pt-4 md:px-0">
               <div className="relative w-full max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search leads..."
-                  value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
-                  onChange={(event) =>
-                    table.getColumn('name')?.setFilterValue(event.target.value)
-                  }
-                  className="pl-10"
-                />
               </div>
             </div>
 

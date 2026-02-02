@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Search, CheckCircle, PlusCircle, Pencil } from 'lucide-react';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { useSearch } from '@/context/SearchContext'; // Import useSearch
 
 const mockProjects = [
     { id: 1, name: "Project Alpha", message: "Lorem ipsum dolor sit amet", created_date: "2025-10-15" },
@@ -17,7 +18,7 @@ const mockProjects = [
 
 export default function ProjectPage() {
   const [projects, setProjects] = useState(mockProjects);
-  const [search, setSearch] = useState('');
+  const { searchQuery, setSearchQuery } = useSearch(); // Use global search context
   const [filteredProjects, setFilteredProjects] = useState(mockProjects);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
@@ -25,11 +26,11 @@ export default function ProjectPage() {
     setFilteredProjects(
       projects.filter(
         (p) =>
-          p.name.toLowerCase().includes(search.toLowerCase()) ||
-          p.message.toLowerCase().includes(search.toLowerCase())
+          p.name.toLowerCase().includes(searchQuery.toLowerCase()) || // Use searchQuery
+          p.message.toLowerCase().includes(searchQuery.toLowerCase()) // Use searchQuery
       )
     );
-  }, [search, projects]);
+  }, [searchQuery, projects]); // Dependency on searchQuery
 
   const handleEditClick = () => {
     // In a real app, you would handle the edit logic here.
@@ -48,8 +49,8 @@ export default function ProjectPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={searchQuery} // Use searchQuery
+                onChange={(e) => setSearchQuery(e.target.value)} // Use setSearchQuery
                 placeholder="Search projects..."
                 className="pl-10 w-full"
               />

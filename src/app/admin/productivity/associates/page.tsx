@@ -24,6 +24,7 @@ import { Calendar as CalendarIcon, Plus, Minus, Filter, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
 import { format } from 'date-fns';
+import { useSearch } from '@/context/SearchContext';
 
 const ProductivityAssociatesPage = () => {
   const [teamLeaders, setTeamLeaders] = useState<any[]>([]);
@@ -36,6 +37,7 @@ const ProductivityAssociatesPage = () => {
   const [associatesData, setAssociatesData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { searchQuery } = useSearch();
 
   const fetchTeamLeaders = async () => {
     const token = localStorage.getItem('authToken');
@@ -110,6 +112,36 @@ const ProductivityAssociatesPage = () => {
     fetchTeamLeaders();
     fetchAssociatesData(startDate, endDate);
   }, [selectedTeamLeader, startDate, endDate]);
+
+  const filteredAssociates = useMemo(() => {
+    if (!associatesData?.team_leader_data) return [];
+    if (!searchQuery) return associatesData.team_leader_data;
+    
+    const lowerCaseQuery = searchQuery.toLowerCase();
+    return associatesData.team_leader_data.filter((associate: any) => 
+      associate.name.toLowerCase().includes(lowerCaseQuery)
+    );
+  }, [associatesData, searchQuery]);
+
+  const calculateTotals = useMemo(() => {
+    const totals = {
+      total_all_calls: 0,
+      total_all_interested: 0,
+      total_all_not_interested: 0,
+      total_all_lost: 0,
+      total_all_visit: 0,
+    };
+
+    filteredAssociates.forEach((associate: any) => {
+      totals.total_all_calls += associate.total_calls || 0;
+      totals.total_all_interested += associate.interested || 0;
+      totals.total_all_not_interested += associate.not_interested || 0;
+      totals.total_all_lost += associate.lost || 0;
+      totals.total_all_visit += associate.visit || 0;
+    });
+
+    return totals;
+  }, [filteredAssociates]);
 
 
   const handleTeamLeaderChange = (value: string) => {

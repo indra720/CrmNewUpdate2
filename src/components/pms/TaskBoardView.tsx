@@ -55,7 +55,7 @@ interface TaskCardProps {
   isOverlay?: boolean;
 }
 const TaskCard: React.FC<TaskCardProps> = ({ task, onView, onEdit, onDelete, isOverlay = false }) => (
-  <Card className={`mb-4 bg-white transition-shadow duration-200 ${isOverlay ? 'shadow-lg' : 'hover:shadow-md'}`}>
+  <Card className={`mb-4 bg-card transition-shadow duration-200 ${isOverlay ? 'shadow-lg' : 'hover:shadow-md'}`}>
     <CardContent className="p-4">
       <div className="flex justify-between items-start mb-2">
         <p className="font-semibold text-sm leading-tight pr-2">{task.title}</p>
@@ -95,7 +95,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onView, onEdit, onDelete, isO
                   e.preventDefault();
                   onDelete && onDelete();
                 }}
-                className="text-red-600 focus:text-red-500 px-2 py-1"
+                className="text-red-600 dark:text-red-400 focus:text-red-500 dark:focus:text-red-500 px-2 py-1"
               >
                 <span>
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -146,13 +146,13 @@ const DroppableColumn: React.FC<DroppableColumnProps> = ({ id, title, tasks, onV
   const { setNodeRef } = useDroppable({ id });
   const taskIds = useMemo(() => tasks.map(t => t.id), [tasks]);
   return (
-    <div className="bg-gray-100/60 rounded-lg">
-      <div className="p-4 border-b"><h3 className="font-semibold flex items-center">{title}<span className='ml-2 text-sm bg-gray-200 text-gray-600 rounded-full px-2 py-0.5'>{tasks.length}</span></h3></div>
+    <div className="bg-muted/60 rounded-lg">
+      <div className="p-4 border-b"><h3 className="font-semibold flex items-center">{title}<span className='ml-2 text-sm bg-muted-foreground/20 text-muted-foreground rounded-full px-2 py-0.5'>{tasks.length}</span></h3></div>
       <div ref={setNodeRef} className="p-4 h-[60vh] overflow-y-auto">
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
           {tasks.length > 0 ? (
             tasks.map(task => <SortableTaskCard key={task.id} task={task} onView={() => onViewTask(task)} onEdit={() => onEditTask(task)} onDelete={() => onDeleteTask(task)} />)
-          ) : ( <div className="flex items-center justify-center h-full"><p className="text-sm text-center text-gray-500 mt-4">No tasks here.</p></div>)}
+          ) : ( <div className="flex items-center justify-center h-full"><p className="text-sm text-center text-muted-foreground mt-4">No tasks here.</p></div>)}
         </SortableContext>
       </div>
     </div>
@@ -163,13 +163,14 @@ const DroppableColumn: React.FC<DroppableColumnProps> = ({ id, title, tasks, onV
 interface TaskBoardViewProps {
   tasks: Task[];
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
+  columns?: Task['status'][];
 }
-const TaskBoardView: React.FC<TaskBoardViewProps> = ({ tasks, setTasks }) => {
+const TaskBoardView: React.FC<TaskBoardViewProps> = ({ tasks, setTasks, columns: columnsProp }) => {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [dialogs, setDialogs] = useState({ details: false, edit: false, delete: false });
 
-  const columns: Task['status'][] = ['To Do', 'In Progress', 'Done'];
+  const columns: Task['status'][] = columnsProp || ['To Do', 'In Progress', 'Done'];
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
   const handleDragStart = (event: DragStartEvent) => {

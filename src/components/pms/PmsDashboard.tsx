@@ -7,7 +7,8 @@ import { TaskRow } from './TaskRow';
 import { mockProjects, mockTasks, mockProjectMembers } from '@/lib/mockData';
 import { PieChart as RechartsPieChart, Pie, Sector, ResponsiveContainer, Legend, Cell } from 'recharts';
 import { useIsMobile } from '@/hooks/use-mobile';
-import React, { useState, useEffect } from 'react'; // Import useState and useEffect
+import React, { useState, useEffect } from 'react';
+import { useSearch } from '@/context/SearchContext'; // Import useSearch
 
 const renderActiveShapeForDesktop = (props: any) => {
   const RADIAN = Math.PI / 180;
@@ -107,6 +108,7 @@ const renderActiveShapeForMobile = (props: any) => {
 export const PmsDashboard = () => {
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const { searchQuery } = useSearch(); // Use global search context
 
   useEffect(() => {
     setCurrentUserRole(localStorage.getItem('userRole'));
@@ -161,14 +163,22 @@ export const PmsDashboard = () => {
     tasksToDisplay = [];
     membersToDisplay = [];
   }
+
+  // Apply search filtering to projectsToDisplay
+  const lowerCaseSearchQuery = searchQuery.toLowerCase();
+  const filteredProjects = projectsToDisplay.filter(project =>
+    project.name.toLowerCase().includes(lowerCaseSearchQuery) ||
+    project.description.toLowerCase().includes(lowerCaseSearchQuery)
+  );
+
   // --- End Role-based data filtering ---
 
 
-  const recentProjects = projectsToDisplay.slice(0, 4);
+  const recentProjects = filteredProjects.slice(0, 4); // Use filteredProjects here
   const recentTasks = tasksToDisplay.filter(t => t.status !== 'done').slice(0, 5);
 
   const stats = {
-    totalProjects: projectsToDisplay.length,
+    totalProjects: filteredProjects.length, // Use filteredProjects for total count
     activeTasks: tasksToDisplay.filter(t => t.status === 'in_progress').length,
     completedTasks: tasksToDisplay.filter(t => t.status === 'done').length,
     teamMembers: membersToDisplay.length, // Display count of relevant members

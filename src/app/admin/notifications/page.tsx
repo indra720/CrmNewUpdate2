@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bell } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSearch } from "@/context/SearchContext";
 
 interface Notification {
   title: string;
@@ -16,6 +17,7 @@ interface Notification {
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const { searchQuery } = useSearch();
 
   async function fetchNotifications() {
     setLoading(true);
@@ -61,6 +63,14 @@ export default function NotificationsPage() {
     fetchNotifications();
   }, []);
 
+  const filteredNotifications = useMemo(() => {
+    if (!searchQuery) return notifications;
+    return notifications.filter(notification =>
+      notification.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      notification.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [notifications, searchQuery]);
+
   return (
     <div className="container mx-auto p-4 md:p-6">
       <Card>
@@ -83,12 +93,12 @@ export default function NotificationsPage() {
                   </div>
                 </div>
               ))
-            ) : notifications.length === 0 ? (
+            ) : filteredNotifications.length === 0 ? (
               <div className="text-center py-10 text-muted-foreground">
                 No notifications found.
               </div>
             ) : (
-              notifications.map((notification, index) => (
+              filteredNotifications.map((notification, index) => (
                 <div
                   key={index}
                   className="flex items-start gap-4 p-3 rounded-lg border bg-background hover:bg-accent"
@@ -114,3 +124,4 @@ export default function NotificationsPage() {
     </div>
   );
 }
+

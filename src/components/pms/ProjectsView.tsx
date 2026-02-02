@@ -29,6 +29,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { useSearch } from "@/context/SearchContext";
 
 const statusFilters: { label: string; value: ProjectStatus | "all" }[] = [
   { label: "All", value: "all" },
@@ -48,11 +49,13 @@ export default function Projects() {
     "all",
   );
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  // const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const { searchQuery } = useSearch()
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -192,7 +195,7 @@ export default function Projects() {
           </div>
 
           <div className="flex flex-row flex-wrap items-center justify-end gap-3 md:flex-nowrap md:gap-4">
-            <div className="relative w-full min-w-[180px] sm:w-auto md:flex-grow">
+            {/* <div className="relative w-full min-w-[180px] sm:w-auto md:flex-grow">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search projects..."
@@ -200,7 +203,7 @@ export default function Projects() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-            </div>
+            </div> */}
             <Select
               value={sortKey}
               onValueChange={(value: SortKey) => setSortKey(value)}

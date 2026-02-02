@@ -122,7 +122,7 @@ export default function CreateMilestonePage() {
   };
 
   return (
-    <div className="container mx-auto flex flex-col min-h-screen p-4 sm:p-6 lg:p-8 space-y-8 bg-card">
+    <div className="container mx-auto flex flex-col min-h-screen p-4 sm:p-6 lg:p-8 space-y-8 bg-background">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -132,7 +132,7 @@ export default function CreateMilestonePage() {
             <ChevronRight className="w-3 h-3" />
             <span className="font-medium text-foreground">Milestone</span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Milestone Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Milestone Management</h1>
         </div>
         <div className="flex flex-col md:flex-row items-center gap-3">
           <Button variant="outline" className="gap-2" onClick={handleopenhistoryPange}>
@@ -141,14 +141,14 @@ export default function CreateMilestonePage() {
           </Button>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-2 bg-orange-600 hover:bg-orange-700">
+              <Button className="gap-2">
                 <PlusCircle className="w-4 h-4" />
                 Create Milestone
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl w-[calc(100%-2rem)]  max-h-[95vh] sm:max-h-[90vh] overflow-y-auto rounded-xl hide-scrollbar">
-              <DialogHeader className=''>
-                <DialogTitle className=''>Create New Milestone</DialogTitle>
+            <DialogContent className="max-w-4xl w-[calc(100%-2rem)] max-h-[95vh] sm:max-h-[90vh] overflow-y-auto rounded-xl hide-scrollbar">
+              <DialogHeader>
+                <DialogTitle>Create New Milestone</DialogTitle>
                 <DialogDescription>
                   Define a new milestone to track progress towards your project goals.
                 </DialogDescription>
@@ -173,7 +173,7 @@ export default function CreateMilestonePage() {
                         </div>
                         <div>
                           <Label htmlFor="parentProject">Parent Project</Label>
-                          <Input id="parentProject" value={formData.parentProject} readOnly className="bg-slate-100" />
+                          <Input id="parentProject" value={formData.parentProject} readOnly className="bg-muted" />
                         </div>
                       </div>
                       <div>
@@ -193,7 +193,7 @@ export default function CreateMilestonePage() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                         {successCriteria.map(criterion => (
-                          <div key={criterion.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-slate-50">
+                          <div key={criterion.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50">
                             <Checkbox id={criterion.id} checked={criterion.checked} onCheckedChange={() => handleCheckboxChange(criterion.id)} />
                             <Input
                               value={criterion.text}
@@ -217,7 +217,7 @@ export default function CreateMilestonePage() {
                     <CardContent className="space-y-4">
                       <div>
                         <Label htmlFor="milestoneCode">Milestone Code</Label>
-                        <Input id="milestoneCode" value={formData.milestoneCode} readOnly className="bg-slate-100 font-mono text-xs" />
+                        <Input id="milestoneCode" value={formData.milestoneCode} readOnly className="bg-muted font-mono text-xs" />
                       </div>
                       <div>
                         <Label htmlFor="priority">Priority</Label>
@@ -278,7 +278,7 @@ export default function CreateMilestonePage() {
               </div>
               <DialogFooter>
                 <Button variant="ghost" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleSubmit} className="bg-orange-600 hover:bg-orange-700">
+                <Button onClick={handleSubmit}>
                   <Flag className="w-4 h-4 mr-2" /> Save Milestone
                 </Button>
               </DialogFooter>

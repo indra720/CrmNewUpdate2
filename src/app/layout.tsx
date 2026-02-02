@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
+import { SearchProvider } from '@/context/SearchContext';
 
 export const metadata: Metadata = {
   title: 'NexusCRM',
@@ -30,7 +31,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <SearchProvider>
+            {children}
+          </SearchProvider>
           <Toaster />
         </ThemeProvider>
       </body>

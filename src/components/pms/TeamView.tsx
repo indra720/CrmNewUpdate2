@@ -16,6 +16,7 @@ import TeamMemberList from './TeamMemberList';
 import MemberProfileDialog from './MemberProfileDialog';
 import { EditTeamMemberDialog } from './EditTeamMemberDialog';
 import RemoveConfirmationDialog from './RemoveConfirmationDialog';
+import { useSearch } from '@/context/SearchContext';
 
 
 // A simple StatCard component for reusability
@@ -48,7 +49,7 @@ const TeamView = () => {
   const [allTeamMembers, setAllTeamMembers] = useState<TeamMember[]>([]); // Renamed to avoid conflict, initialized as empty
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const { searchQuery } = useSearch();
   const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [dialogs, setDialogs] = useState({ profile: false, edit: false, remove: false });
@@ -89,11 +90,11 @@ const TeamView = () => {
   const filteredMembers = useMemo(() => {
     // Filter the `allTeamMembers` state
     return allTeamMembers.filter(member =>
-      member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.role.toLowerCase().includes(searchTerm.toLowerCase())
+      member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.role.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [allTeamMembers, searchTerm]); // Dependency on allTeamMembers
+  }, [allTeamMembers, searchQuery]); // Dependency on allTeamMembers
 
   // Derived metrics for the overview cards - now based on filteredMembers
   const totalMembers = filteredMembers.length;
@@ -150,7 +151,7 @@ const TeamView = () => {
 
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 bg-white rounded-lg shadow-sm">
+    <div className="p-4 sm:p-6 space-y-6 bg-card rounded-lg shadow-sm">
       {/* Header and Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -192,23 +193,6 @@ const TeamView = () => {
           icon={<CheckCircle className="h-4 w-4 text-muted-foreground" />} 
           description="Tasks completed in the last week."
         />
-      </div>
-
-      {/* Search and Filters */}
-      <div className="flex flex-col md:flex-row md:items-center gap-4">
-        <div className="relative w-full md:max-w-xs">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search members..." 
-            className="pl-8" 
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
-        </div>
-        {/* Placeholder for role/status filters */}
-        <div className="md:ml-auto">
-          {/* Filters for Role, Status etc. will go here */}
-        </div>
       </div>
 
       {/* Team Members List */}

@@ -46,11 +46,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Phone, MessageSquare, PlusCircle, Search, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { updateAdminLeadStatus } from '@/lib/api'; // Added import
+import { useSearch } from '@/context/SearchContext';
 
 const LeadsPage = () => {
   const [leads, setLeads] = useState<any[]>([]);
   const [filteredLeads, setFilteredLeads] = useState<any[]>([]);
-  const [search, setSearch] = useState('');
+  const { searchQuery } = useSearch();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -98,13 +99,13 @@ const LeadsPage = () => {
     if (leads.length > 0) {
       setFilteredLeads(
         leads.filter((lead) =>
-          lead.name.toLowerCase().includes(search.toLowerCase())
+          lead.name.toLowerCase().includes(searchQuery.toLowerCase())
         )
       );
     } else {
       setFilteredLeads([]);
     }
-  }, [search, leads]);
+  }, [searchQuery, leads]);
 
   const handleStatusChange = async (leadId: number, newStatus: string) => {
     const originalLeads = [...leads]; // Store original leads for potential rollback
@@ -135,7 +136,7 @@ const LeadsPage = () => {
       // Revert UI on error
       setLeads(originalLeads);
       setFilteredLeads(originalLeads.filter((lead) =>
-        lead.name.toLowerCase().includes(search.toLowerCase())
+        lead.name.toLowerCase().includes(searchQuery.toLowerCase())
       ));
     }
   };
@@ -147,15 +148,6 @@ const LeadsPage = () => {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <h1 className="text-2xl font-bold tracking-tight">Staff Leads</h1>
           <div className="flex w-full md:w-auto items-center gap-2">
-            <div className="relative flex-1 md:flex-initial">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search leads..."
-                className="pl-10"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
             <Button className="w-full md:w-auto">
               <PlusCircle className="mr-2 h-4 w-4" />
               Add New Lead
@@ -268,5 +260,3 @@ const LeadsPage = () => {
 };
 
 export default LeadsPage;
-
-    
