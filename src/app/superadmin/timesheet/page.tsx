@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Search, Plus, Minus, User, Mail, User as UserIcon, Calendar, MapPin } from 'lucide-react';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { useSearch } from '@/context/SearchContext';
 
 interface ActivityLog {
   id: number;
@@ -26,7 +27,7 @@ interface ActivityLog {
 
 const TimeSheetPage = () => {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
-  const [search, setSearch] = useState('');
+  const { searchQuery } = useSearch();
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
@@ -72,12 +73,12 @@ const TimeSheetPage = () => {
     setExpandedRowId(expandedRowId === rowId ? null : rowId);
   };
 
-  const filteredLogs = search 
+  const filteredLogs = searchQuery 
     ? logs.filter((log) =>
         Object.values(log)
           .join(' ')
           .toLowerCase()
-          .includes(search.toLowerCase())
+          .includes(searchQuery.toLowerCase())
       )
     : logs;
 
@@ -107,19 +108,7 @@ const TimeSheetPage = () => {
       <Card className="shadow-lg rounded-2xl">
         <CardHeader>
           <div className="flex flex-row items-center justify-between gap-2 px-2 md:px-0 md:gap-4">
-            <div className="relative flex-1 md:max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search logs..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="pl-10 w-full"
-              />
-            </div>
+
           </div>
         </CardHeader>
       </Card>

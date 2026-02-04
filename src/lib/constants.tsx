@@ -169,6 +169,20 @@ export const SUPERADMIN_SIDENAV_ITEMS = [
     icon: <Presentation className="h-5 w-5" />,
   },
   {
+    title: 'Projects',
+    path: '/superadmin/projects',
+    icon: <Presentation className="h-5 w-5" />,
+    submenu: true,
+    subMenuItems: [
+      { title: 'Dashboard', path: '/superadmin/projects/dashboard' },
+      { title: 'Projects', path: '/superadmin/projects/all' },
+      { title: 'Sprints', path: '/superadmin/projects/sprints' },
+      { title: 'MileStone', path: '/superadmin/projects/MileStone' },
+      { title: 'Tasks', path: '/superadmin/projects/tasks' },
+      { title: 'Team', path: '/superadmin/projects/team' },
+    ],
+  },
+  {
     title: 'Add Sell',
     path: '/superadmin/add-sell',
     icon: <FilePlus className="h-5 w-5" />,

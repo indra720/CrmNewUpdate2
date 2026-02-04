@@ -24,6 +24,7 @@ import { Calendar, Plus, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker'; // Import DatePicker
 import { addDays, format } from 'date-fns';
+import { useSearch } from '@/context/SearchContext';
 
 const  ProductivityStaffPage= () => {
   const [admins, setAdmins] = useState<any[]>([]);
@@ -35,6 +36,21 @@ const  ProductivityStaffPage= () => {
   const [teamLeaderData, setTeamLeaderData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const { searchQuery } = useSearch();
+
+  const filteredStaffData = React.useMemo(() => {
+    if (!teamLeaderData?.staff_data) return [];
+    const lowerCaseSearchQuery = searchQuery.toLowerCase();
+    return teamLeaderData.staff_data.filter((staff: any) => {
+      return (
+        staff.name.toLowerCase().includes(lowerCaseSearchQuery) ||
+        staff.total_calls.toString().includes(lowerCaseSearchQuery) ||
+        staff.interested.toString().includes(lowerCaseSearchQuery) ||
+        staff.visit.toString().includes(lowerCaseSearchQuery)
+      );
+    });
+  }, [teamLeaderData, searchQuery]);
 
   const fetchTeamLeaderData = async () => {
     const token = localStorage.getItem('authToken');
@@ -176,7 +192,7 @@ const  ProductivityStaffPage= () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {teamLeaderData.staff_data && teamLeaderData.staff_data.map((row: any, i: number) => (
+                {filteredStaffData.map((row: any, i: number) => (
                   <React.Fragment key={row.id}>
                     <TableRow data-state={expandedRowId === row.id && 'selected'}>
                       <TableCell>
@@ -255,7 +271,7 @@ const  ProductivityStaffPage= () => {
                     )}
                   </React.Fragment>
                 ))}
-                {(!teamLeaderData.staff_data || teamLeaderData.staff_data.length === 0) && (
+                {filteredStaffData.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={10} className="h-24 text-center">
                       No matching records found

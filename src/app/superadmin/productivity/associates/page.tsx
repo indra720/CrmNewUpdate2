@@ -24,6 +24,7 @@ import { Calendar, Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from '@/components/ui/date-picker'; // Import DatePicker
 import { addDays, format } from 'date-fns';
+import { useSearch } from '@/context/SearchContext';
 
 const ProductivityAssociatesPage = () => {
   const [admins, setAdmins] = useState<any[]>([]);
@@ -35,6 +36,21 @@ const ProductivityAssociatesPage = () => {
   const [AssociateData, setAssociateData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const { searchQuery } = useSearch();
+
+  const filteredAssociateData = React.useMemo(() => {
+    if (!AssociateData?.staff_data) return [];
+    const lowerCaseSearchQuery = searchQuery.toLowerCase();
+    return AssociateData.staff_data.filter((associate: any) => {
+      return (
+        associate.name.toLowerCase().includes(lowerCaseSearchQuery) ||
+        associate.total_calls.toString().includes(lowerCaseSearchQuery) ||
+        associate.interested.toString().includes(lowerCaseSearchQuery) ||
+        associate.visit.toString().includes(lowerCaseSearchQuery)
+      );
+    });
+  }, [AssociateData, searchQuery]);
 
   const fetchAssociateData = async () => {
     const token = localStorage.getItem("authToken");
@@ -188,7 +204,7 @@ const ProductivityAssociatesPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {AssociateData.staff_data && AssociateData.staff_data.map((row: any, i: number) => (
+                {filteredAssociateData.map((row: any, i: number) => (
                   <React.Fragment key={row.id}>
                     <TableRow data-state={expandedRowId === row.id && 'selected'}>
                       <TableCell>
@@ -267,7 +283,7 @@ const ProductivityAssociatesPage = () => {
                     )}
                   </React.Fragment>
                 ))}
-                {(!AssociateData.staff_data || AssociateData.staff_data.length === 0) && (
+               {filteredAssociateData.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={10} className="h-24 text-center">
                       No matching records found

@@ -30,6 +30,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { useSearch } from "@/context/SearchContext";
+import { fetchProjects as apiFetchProjects } from "@/lib/api"; // Import the new API function
 
 const statusFilters: { label: string; value: ProjectStatus | "all" }[] = [
   { label: "All", value: "all" },
@@ -58,38 +59,15 @@ export default function Projects() {
   const { searchQuery } = useSearch()
 
   useEffect(() => {
-    const fetchProjects = async () => {
+    const getProjects = async () => { // Renamed local function to avoid conflict with imported one
       setIsLoading(true);
       setError(null);
       const role = localStorage.getItem('userRole');
       setCurrentUserRole(role);
-
-      const token = localStorage.getItem('authToken');
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-      const API_ENDPOINT = `${API_BASE_URL}/api/projects/projects/`;
-
+      
       try {
-        const response = await fetch(API_ENDPOINT, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Token ${token}`,
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch projects');
-        }
-        const data = await response.json();
-        const projectsFromApi = Array.isArray(data) ? data : (data.results || []);
-
-        const transformedProjects = projectsFromApi.map(project => ({
-          ...project,
-          startDate: project.start_date,
-          endDate: project.end_date,
-        }));
-
-        setUserProjects(transformedProjects);
+        const projectsData = await apiFetchProjects(); // Call the imported API function
+        setUserProjects(projectsData);
       } catch (err: any) {
         setError(err.message || 'An unexpected error occurred');
         setUserProjects(mockProjects as Project[]);
@@ -98,7 +76,7 @@ export default function Projects() {
       }
     };
 
-    fetchProjects();
+    getProjects();
   }, []);
 
   const filteredProjects =

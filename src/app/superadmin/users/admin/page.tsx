@@ -68,7 +68,7 @@ import {
   Search,
   Minus,
   Plus,
-  EyeOff, // Added EyeOff
+  EyeOff, // My comment test
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
@@ -93,6 +93,7 @@ import { DetailsDialog } from "@/components/details-dialog";
 import { DateRange } from "react-day-picker";
 import { addDays } from "date-fns";
 import { toggleUserActiveStatus } from "@/lib/api";
+import { useSearch } from "@/context/SearchContext";
 
 
 
@@ -286,7 +287,7 @@ const ReviewDetailItem = ({
 
 export default function AdminManagementPage() {
   const [users, setUsers] = useState<any[]>([]);
-  const [search, setSearch] = useState("");
+  const { searchQuery } = useSearch();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<"add" | "edit">("add");
   const [formData, setFormData] = useState<any>(initialFormData);
@@ -661,8 +662,7 @@ const handleOpenEditForm = (user: any) => {
   const filteredUsers = users.filter((u) =>
     Object.values(u).some(
       (val) =>
-        val &&
-        val.toString().toLowerCase().includes(search.trim().toLowerCase())
+        val.toString().toLowerCase().includes(searchQuery.trim().toLowerCase())
     )
   );
 
@@ -740,15 +740,7 @@ const handleOpenEditForm = (user: any) => {
             </CardDescription>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative w-full sm:max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search Admins..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="flex-1 sm:flex-initial pl-10"
-              />
-            </div>
+
             <Button variant="outline" className="flex items-center">
               <Filter className="h-4 w-4" />
               <span className="hidden sm:inline ml-2">Filter</span>

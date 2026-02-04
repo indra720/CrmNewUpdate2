@@ -21,6 +21,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils'
+import { useSearch } from '@/context/SearchContext';
 import { fetchInterestedLeads, Lead } from '@/lib/api';
 
 function InterestedLeadsPage() {
@@ -42,11 +43,13 @@ function InterestedLeadsPage() {
     return `${day}-${month}-${year} ${hours}:${minutes}`;
   };
 
+  const { searchQuery } = useSearch();
+
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
-        const data = await fetchInterestedLeads();
+        const data = await fetchInterestedLeads(searchQuery); // Pass searchQuery
         setLeads(data || []);
       } catch (err: any) {
         setError(err.message || 'Failed to fetch leads.');
@@ -55,7 +58,7 @@ function InterestedLeadsPage() {
       }
     }
     fetchData();
-  }, []);
+  }, [searchQuery]); // Add searchQuery to dependency array
 
   const toggleRow = (rowId: number) => {
     setExpandedRowId(expandedRowId === rowId ? null : rowId);
@@ -217,17 +220,7 @@ function InterestedLeadsPage() {
           <CardContent className="p-2 md:p-6 md:pt-0">
             
             <div className="flex items-center justify-between mb-4 px-2 pt-4 md:px-0">
-              <div className="relative w-full max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search leads..."
-                  value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
-                  onChange={(event) =>
-                    table.getColumn('name')?.setFilterValue(event.target.value)
-                  }
-                  className="pl-10"
-                />
-              </div>
+
             </div>
 
             <div className="w-full rounded-md border overflow-x-hidden md:overflow-x-auto">

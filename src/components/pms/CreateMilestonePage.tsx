@@ -122,7 +122,7 @@ export default function CreateMilestonePage() {
   };
 
   return (
-    <div className="container mx-auto flex flex-col min-h-screen p-4 sm:p-6 lg:p-8 space-y-8 bg-background">
+    <div className="container mx-auto flex flex-col min-h-screen  space-y-8 bg-background">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

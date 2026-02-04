@@ -3,6 +3,7 @@
 import { SuperAdminSidebar } from '@/components/layout/superadmin-sidebar';
 import { Header } from '@/components/layout/header';
 import React, { useState } from 'react';
+import { SearchProvider } from '@/context/SearchContext';
 
 export default function SuperAdminLayout({
   children,
@@ -13,14 +14,16 @@ export default function SuperAdminLayout({
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
-    <div className="flex min-h-screen w-full bg-background text-foreground">
-      <SuperAdminSidebar isSidebarOpen={isSidebarOpen} setSidebarOpen={setSidebarOpen} isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
-      <div className={`flex flex-col flex-1 transition-all duration-300 ease-in-out ${isCollapsed ? 'lg:ml-20' : 'lg:ml-60'}`}>
-        <Header setSidebarOpen={setSidebarOpen} />
-        <main className="flex-1 p-4 sm:px-6 sm:py-0 md:p-4">
-            {children}
-        </main>
+    <SearchProvider>
+      <div className="flex min-h-screen w-full bg-background text-foreground">
+        <SuperAdminSidebar isSidebarOpen={isSidebarOpen} setSidebarOpen={setSidebarOpen} isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
+        <div className={`flex flex-col flex-1 transition-all duration-300 ease-in-out ${isCollapsed ? 'lg:ml-20' : 'lg:ml-60'}`}>
+          <Header setSidebarOpen={setSidebarOpen} />
+          <main className="flex-1 p-4 sm:px-6 sm:py-0 md:p-4">
+              {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </SearchProvider>
   );
 }

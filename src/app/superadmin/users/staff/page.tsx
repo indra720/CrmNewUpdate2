@@ -81,6 +81,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { DateRange } from 'react-day-picker';
 import { addDays } from 'date-fns';
 import { fetchSuperuserStaffLeadsByTag, toggleUserActiveStatus, fetchTeamLeaders, fetchAdminsForSelection } from "@/lib/api";
+import { useSearch } from "@/context/SearchContext";
 
 
 
@@ -158,7 +159,7 @@ const ReviewDetailItem = ({ label, value }: { label: string, value: string | und
 
 export default function StaffManagementPage() {
   const [users, setUsers] = useState<any[]>([]);
-  const [search, setSearch] = useState('');
+  const { searchQuery } = useSearch();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<'add' | 'edit'>('add');
   const [formData, setFormData] = useState<any>(initialFormData);
@@ -508,7 +509,7 @@ export default function StaffManagementPage() {
     Object.values(u).some(
       (val) =>
         val &&
-        val.toString().toLowerCase().includes(search.trim().toLowerCase())
+        val.toString().toLowerCase().includes(searchQuery.trim().toLowerCase())
     )
   );
 
@@ -567,15 +568,7 @@ export default function StaffManagementPage() {
             <CardDescription className="hidden sm:block">View and manage staff users.</CardDescription>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative">
-              <Input
-                placeholder="Search..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="flex-1 sm:flex-initial sm:max-w-xs pl-10"
-              />
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            </div>
+
             <Button size="icon" className="sm:hidden" onClick={handleOpenAddForm}>
               <PlusCircle className="h-4 w-4" />
               <span className="sr-only">Add Staff</span>

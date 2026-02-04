@@ -34,6 +34,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useSearch } from '@/context/SearchContext';
 
 
 type Lead = {
@@ -70,8 +71,20 @@ const LeadsContent = () => {
  
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const { searchQuery } = useSearch(); // Global search query
   const [addLeadModalOpen, setAddLeadModalOpen] = useState(false);
   const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
+
+  useEffect(() => {
+    // Update column filter for 'name' when global searchQuery changes
+    setColumnFilters(prev => {
+      const newFilters = prev.filter(f => f.id !== "name");
+      if (searchQuery) {
+        newFilters.push({ id: "name", value: searchQuery });
+      }
+      return newFilters;
+    });
+  }, [searchQuery]); // Depend on searchQuery
   const { toast } = useToast();
 
   const toggleRow = (rowId: number) => {
@@ -316,22 +329,7 @@ useEffect(()=>{
             <CardContent className="p-2 md:p-6 md:pt-0">
               <div className="flex flex-row gap-4 my-4">
                 <div className="flex items-center gap-2">
-                  <div className="relative w-full max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search leads..."
-                      value={
-                        (table.getColumn("name")?.getFilterValue() as string) ??
-                        ""
-                      }
-                      onChange={(event) =>
-                        table
-                          .getColumn("name")
-                          ?.setFilterValue(event.target.value)
-                      }
-                      className="pl-10"
-                    />
-                  </div>
+
                 </div>
                 <Link href="/superadmin/leads/importlead">
                   <Button>

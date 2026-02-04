@@ -47,6 +47,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useSearch } from '@/context/SearchContext';
 import { Search, Loader2, Phone, MessageSquare, ArrowUpDown, Calendar as CalendarIcon, FileDown, ArrowLeft, Briefcase, Users, Clock, Tag, MoreVertical, Plus, Minus , HistoryIcon } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -58,7 +59,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { Calendar } from '@/components/ui/calendar';
 
 const PendingFollowupsContent = () => {
-  const [search, setSearch] = useState('');
+  const { searchQuery } = useSearch();
   const [page, setPage] = useState(1);
   const [leads, setLeads] = useState<any[]>([]);
   const [totalPages, setTotalPages] = useState(1);
@@ -94,7 +95,7 @@ const PendingFollowupsContent = () => {
       const formattedEndDate = endDate ? format(endDate, 'yyyy-MM-dd') : undefined;
 
       // Use getTeamCustomerLeads directly with the correct tag
-      const data = await getTeamCustomerLeads('pending_follow', search, formattedStartDate, formattedEndDate); 
+      const data = await getTeamCustomerLeads('pending_follow', searchQuery, formattedStartDate, formattedEndDate); 
       setLeads(data.results);
       setTotalPages(Math.ceil(data.count / 10)); // Assuming 10 items per page
     } catch (error: any) {
@@ -106,7 +107,7 @@ const PendingFollowupsContent = () => {
 
   useEffect(() => {
     fetchLeads();
-  }, [page, search, startDate, endDate]); // Removed searchParams dependency
+  }, [page, searchQuery, startDate, endDate]); // Removed searchParams dependency
 
   async function openEditModal(lead: any) {
     setEditingLead(lead);
@@ -271,15 +272,7 @@ const PendingFollowupsContent = () => {
     <div className="space-y-6 flex flex-col h-full pt-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
           {/* Search Input */}
-          <div className="relative w-full lg:max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search leads..."
-              value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
-              onChange={(event) => table.getColumn('name')?.setFilterValue(event.target.value)}
-              className="pl-10"
-            />
-          </div>
+
           
           {/* Date Pickers and Export Form */}
           <form className="flex flex-col gap-4 md:flex-row md:items-end w-full lg:w-auto">

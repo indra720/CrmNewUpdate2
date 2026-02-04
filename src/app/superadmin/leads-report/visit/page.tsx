@@ -21,10 +21,12 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils'
+import { useSearch } from '@/context/SearchContext';
 import { Lead } from '@/lib/api';
 import { DetailsDialog } from '@/components/details-dialog';
 
 function VisitLeadsPage() {
+  const { searchQuery } = useSearch();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
@@ -51,8 +53,16 @@ function VisitLeadsPage() {
       try {
         setLoading(true);
         const token = localStorage.getItem("authToken");
+        let url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/api/leads/visit/`;
+        const params = new URLSearchParams();
+        if (searchQuery) {
+          params.append("search", searchQuery);
+        }
+        if (params.toString()) {
+          url += `?${params.toString()}`;
+        }
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/api/leads/visit/`, // CORRECTED URL
+          url,
           {
             headers: {
               Authorization: `Token ${token}`,
@@ -72,7 +82,7 @@ function VisitLeadsPage() {
       }
     }
     fetchData();
-  }, []);
+  }, [searchQuery]);
 
   const toggleRow = (rowId: number) => {
     setExpandedRowId(expandedRowId === rowId ? null : rowId);
@@ -239,17 +249,7 @@ function VisitLeadsPage() {
           <CardContent className="p-2 md:p-6 md:pt-0">
             
             <div className="flex items-center justify-between mb-4 px-2 pt-4 md:px-0">
-              <div className="relative w-full max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search leads..."
-                  value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
-                  onChange={(event) =>
-                    table.getColumn('name')?.setFilterValue(event.target.value)
-                  }
-                  className="pl-10"
-                />
-              </div>
+
             </div>
 
             <div className="w-full rounded-md border overflow-x-hidden md:overflow-x-auto">

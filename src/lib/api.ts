@@ -501,7 +501,7 @@ export async function fetchTeamLeaderStaffList(): Promise<any[]> {
 }
 
 // Function to fetch interested leads
-export async function fetchInterestedLeads(): Promise<Lead[]> {
+export async function fetchInterestedLeads(search?: string): Promise<Lead[]> {
   const token = localStorage.getItem("authToken");
 
   if (!token) {
@@ -509,8 +509,17 @@ export async function fetchInterestedLeads(): Promise<Lead[]> {
   }
 
   try {
+    let url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/superuser/staff-leads/interested/`;
+    const params = new URLSearchParams();
+    if (search) {
+      params.append("search", search);
+    }
+    if (params.toString()) {
+      url += `?${params.toString()}`;
+    }
+
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/superuser/staff-leads/interested/`, // CORRECTED URL
+      url, // CORRECTED URL
       {
         method: "GET",
         headers: {
@@ -1867,6 +1876,48 @@ export async function fetchCurrentUserProfile(): Promise<{ name: string; email: 
     throw new Error(`Failed to fetch user profile: ${error.message || "Unknown error"}`);
   }
 }
+
+import { Project } from "@/types"; // Assuming Project is defined here or accessible
+export async function fetchProjects(): Promise<Project[]> {
+  const token = localStorage.getItem("authToken");
+
+  if (!token) {
+    throw new Error("Authentication token not found.");
+  }
+
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/projects/`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Token ${token}`,
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const projectsFromApi = Array.isArray(data) ? data : (data.results || []);
+
+    const transformedProjects: Project[] = projectsFromApi.map((project: any) => ({
+      ...project,
+      startDate: project.start_date,
+      endDate: project.end_date,
+      // Ensure other fields match the Project interface, or provide defaults/transformations
+      // For example, if project.status is a string but Project.status is a specific enum:
+      // status: project.status as ProjectStatus,
+    }));
+
+    return transformedProjects;
+  } catch (error: any) {
+    console.error("Failed to fetch projects:", error);
+    throw new Error(`Failed to fetch projects: ${error.message || "Unknown error"}`);
+  }
+}
+
 
 
 

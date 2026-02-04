@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Search, CheckCircle, PlusCircle, Pencil, Plus, Minus, User, MessageSquare, Youtube, Calendar } from 'lucide-react';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { useSearch } from '@/context/SearchContext';
 
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -28,7 +29,7 @@ interface Project {
 
 export default function ProjectPage() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [search, setSearch] = useState('');
+  const { searchQuery } = useSearch();
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
@@ -76,8 +77,8 @@ export default function ProjectPage() {
     setFilteredProjects(
       projects.filter(
         (p) =>
-          p.name.toLowerCase().includes(search.toLowerCase()) ||
-          p.message.toLowerCase().includes(search.toLowerCase())
+          p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.message.toLowerCase().includes(searchQuery.toLowerCase())
       )
     );
   }, [search, projects]);
@@ -179,16 +180,7 @@ export default function ProjectPage() {
       <Card className="shadow-lg rounded-2xl">
         <CardHeader>
           <div className="flex flex-row items-center justify-between gap-2 px-2">
-            <div className="relative flex-grow">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search projects..."
-                className="pl-10 w-full md:w-64 lg:w-80"
-              />
-            </div>
+
             <Button 
               onClick={() => setIsAddFormOpen(true)}
               className="flex-shrink-0"

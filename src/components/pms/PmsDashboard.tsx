@@ -4,11 +4,15 @@ import { FolderKanban, CheckSquare, Users, Clock, Calendar, } from 'lucide-react
 import { StatsCard } from './StatsCard';
 import { ProjectCard } from './ProjectCard';
 import { TaskRow } from './TaskRow';
-import { mockProjects, mockTasks, mockProjectMembers } from '@/lib/mockData';
+import { mockTasks, mockProjectMembers } from '@/lib/mockData'; // Removed mockProjects
 import { PieChart as RechartsPieChart, Pie, Sector, ResponsiveContainer, Legend, Cell } from 'recharts';
 import { useIsMobile } from '@/hooks/use-mobile';
 import React, { useState, useEffect } from 'react';
 import { useSearch } from '@/context/SearchContext'; // Import useSearch
+import { fetchProjects } from "@/lib/api"; // Import the fetchProjects API function
+import { Project } from "@/types"; // Import Project type if not already globally available
+
+
 
 const renderActiveShapeForDesktop = (props: any) => {
   const RADIAN = Math.PI / 180;
@@ -108,11 +112,31 @@ const renderActiveShapeForMobile = (props: any) => {
 export const PmsDashboard = () => {
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [allProjects, setAllProjects] = useState<Project[]>([]); // State for fetched projects
+  const [projectsLoading, setProjectsLoading] = useState(true); // Loading state for projects
+  const [projectsError, setProjectsError] = useState<string | null>(null); // Error state for projects
   const { searchQuery } = useSearch(); // Use global search context
 
   useEffect(() => {
     setCurrentUserRole(localStorage.getItem('userRole'));
     setCurrentUserId(localStorage.getItem('userId'));
+
+    const getProjects = async () => {
+      setProjectsLoading(true);
+      setProjectsError(null);
+      try {
+        const projectsData = await fetchProjects();
+        setAllProjects(projectsData);
+      } catch (err: any) {
+        setProjectsError(err.message || 'Failed to fetch projects');
+        // Fallback to mock data if API fails, similar to ProjectsView
+        // setAllProjects(mockProjects as Project[]);
+      } finally {
+        setProjectsLoading(false);
+      }
+    };
+
+    getProjects();
   }, []);
 
   const [activeIndex, setActiveIndex] = React.useState(0);
@@ -123,12 +147,15 @@ export const PmsDashboard = () => {
   };
 
   // --- Role-based data filtering ---
-  let projectsToDisplay = [];
+  let projectsToDisplay: Project[] = []; // Explicitly type as Project[]
   let tasksToDisplay = [];
   let membersToDisplay = [];
 
-  if (currentUserRole === 'admin' || currentUserRole === 'superadmin') {
-    projectsToDisplay = mockProjects;
+  if (projectsLoading) {
+    // If projects are still loading, don't try to filter them yet
+    projectsToDisplay = [];
+  } else if (currentUserRole === 'admin' || currentUserRole === 'superadmin') {
+    projectsToDisplay = allProjects;
     tasksToDisplay = mockTasks;
     membersToDisplay = mockProjectMembers;
   } else if (currentUserRole === 'team-leader' && currentUserId) {
@@ -142,7 +169,7 @@ export const PmsDashboard = () => {
       .map(member => member.projectId);
     
     // Now filter projects to include only those relevant to the team leader
-    projectsToDisplay = mockProjects.filter(project => teamLeaderProjectIds.includes(project.id));
+    projectsToDisplay = allProjects.filter(project => teamLeaderProjectIds.includes(project.id)); // Use allProjects
 
     // Filter tasks that belong to these projects
     const relevantTaskProjectIds = projectsToDisplay.map(p => p.id);
@@ -174,7 +201,7 @@ export const PmsDashboard = () => {
   // --- End Role-based data filtering ---
 
 
-  const recentProjects = filteredProjects.slice(0, 4); // Use filteredProjects here
+   // Use filteredProjects here
   const recentTasks = tasksToDisplay.filter(t => t.status !== 'done').slice(0, 5);
 
   const stats = {
@@ -239,7 +266,7 @@ export const PmsDashboard = () => {
   
 
   // Show a loading state or nothing if role/ID is not yet determined
-  if (!currentUserRole || !currentUserId) {
+  if (!currentUserRole || !currentUserId || projectsLoading) { // Also check projectsLoading
     return (
       <div className="flex items-center justify-center min-h-[200px] text-muted-foreground">
         Loading dashboard data...
@@ -248,8 +275,12 @@ export const PmsDashboard = () => {
   }
 
 
+ 
+
+ 
+
   return (
-    <div className="space-y-8 bg-card rounded-md p-6">
+    <div className="space-y-8 bg-card rounded-md p-4">
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
@@ -297,13 +328,20 @@ export const PmsDashboard = () => {
             </a>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {recentProjects.map((project) => (
+            {projectsLoading && <p className="col-span-2 text-center py-4">Loading projects...</p>}
+            {projectsError && <p className="col-span-2 text-center py-4 text-red-500">Error: {projectsError}</p>}
+            {!projectsLoading && !projectsError && filteredProjects.slice(0, 4).map((project) => ( // Display top 2 projects
               <ProjectCard
                 key={project.id}
                 project={project}
-                members={mockProjectMembers.filter(m => m.projectId === project.id)} // This will need refinement for team leader view
+                members={project.members ?? []}
               />
             ))}
+            {!projectsLoading && !projectsError && filteredProjects.length === 0 && (
+              <div className="col-span-2 p-8 text-center text-muted-foreground">
+                No recent projects found.
+              </div>
+            )}
           </div>
         </section>
 
@@ -317,7 +355,11 @@ export const PmsDashboard = () => {
           </div>
           <div className="bg-card rounded-xl border border-border">
             {recentTasks.map((task) => (
-              <TaskRow key={task.id} task={task} />
+              <TaskRow key={task.id} task={task} onViewTask={function (): void {
+                throw new Error('Function not implemented.');
+              } } onStatusChange={function (newStatus: 'To Do' | 'In Progress' | 'Done'): void {
+                throw new Error('Function not implemented.');
+              } } />
             ))}
             {recentTasks.length === 0 && (
               <div className="p-8 text-center text-muted-foreground">

@@ -80,6 +80,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { DateRange } from 'react-day-picker';
 import { addDays } from 'date-fns';
 import { toggleUserActiveStatus, editTeamLeader } from "@/lib/api";
+import { useSearch } from "@/context/SearchContext";
 
 const kpiData = [
     { title: "Pending FollowUps", valueKey: "total_pending_followup", icon: Clock, color: "text-yellow-500", link: "/superadmin/reports/pending-followups?source=team-leader" },
@@ -159,7 +160,7 @@ const ReviewDetailItem = ({ label, value }: { label: string, value: string | und
 
 export default function TeamLeaderManagementPage() {
   const [users, setUsers] = useState<any[]>([]);
-  const [search, setSearch] = useState('');
+  const { searchQuery } = useSearch();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<'add' | 'edit'>('add');
   const [formData, setFormData] = useState<any>(initialFormData);
@@ -505,7 +506,7 @@ export default function TeamLeaderManagementPage() {
       (val: any) =>
         val &&
         (typeof val === 'string' || typeof val === 'number' || (typeof val === 'object' && val.name)) &&
-        (val.name || val).toString().toLowerCase().includes(search.trim().toLowerCase())
+        (val.name || val).toString().toLowerCase().includes(searchQuery.trim().toLowerCase())
     )
   );
 
@@ -568,12 +569,7 @@ export default function TeamLeaderManagementPage() {
                 <CardDescription className="hidden sm:block">View and manage team leaders.</CardDescription>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Input
-              placeholder="Search Team Leaders..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 sm:flex-initial sm:max-w-xs"
-            />
+
              <Button variant="outline" size="icon" className="sm:hidden">
               <Filter className="h-4 w-4" />
               <span className="sr-only">Filter</span>
