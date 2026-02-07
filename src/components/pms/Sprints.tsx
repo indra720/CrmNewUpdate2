@@ -119,8 +119,11 @@ import {
 import {
   mockProjects, mockUsers, mockMilestones, initialSprints, mockBacklogTasks, burndownData
 } from './sprint-mock-data';
-import { CreateSprintDialog } from '../forms/CreateSprintDialog';
+import { CreateSprintDialog } from '../forms/CreateSprintDialog'; // Keep import
 import { useSearch } from '@/context/SearchContext';
+import { fetchSprints, fetchSprintsHistory } from '@/lib/api'; // Revert to original import
+import { useRouter } from 'next/navigation';
+
 
 // --- Sub-components ---
 
@@ -222,34 +225,55 @@ const ALL_STATUSES: SprintTask['status'][] = ['Todo', 'In Progress', 'Review', '
 
 // --- Main Page Component ---
 
-export function Sprints() {
-  const [sprints, setSprints] = useState<Sprint[]>(initialSprints);
-  const [activeSprint, setActiveSprint] = useState<Sprint | null>(initialSprints[0]);
+export function Sprints({ isHistoryView = false }: { isHistoryView?: boolean }) {
+  const [sprints, setSprints] = useState<Sprint[]>([]); // Initialize with empty array
+  const [activeSprint, setActiveSprint] = useState<Sprint | null>(null); // Initialize with null
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [tasks, setTasks] = useState<SprintTask[]>(mockBacklogTasks);
+  const [tasks, setTasks] = useState<SprintTask[]>(mockBacklogTasks); // Restore mock tasks
   const [projectBacklog, setProjectBacklog] = useState<SprintTask[]>([
     { id: 'TASK-201', title: 'Database Optimization', type: 'Improvement', priority: 'Medium', status: 'Todo', storyPoints: 3 },
     { id: 'TASK-202', title: 'Email Notification Service', type: 'Feature', priority: 'High', status: 'Todo', storyPoints: 5 },
     { id: 'TASK-203', title: 'Mobile App CI/CD', type: 'Improvement', priority: 'Low', status: 'Todo', storyPoints: 2 },
-  ]);
+  ]); // Restore mock project backlog
   const [activeTab, setActiveTab] = useState('board');
+  const [isLoadingSprints, setIsLoadingSprints] = useState(true); // New loading state for sprints
+  const [sprintsError, setSprintsError] = useState<string | null>(null); // New error state for sprints
   const { searchQuery } = useSearch();
 
-  // Form State for Create Sprint
-  const [newSprint, setNewSprint] = useState<Partial<Sprint>>({
-    type: 'Development',
-    durationWeeks: 2,
-    workingDays: [1, 2, 3, 4, 5],
-    status: 'Draft',
-    settings: {
-      allowTaskOverflow: false,
-      autoClose: true,
-      allowScopeChange: false,
-      freezeWhenActive: true
-    },
-    teamMembers: [],
-    capacity: {}
-  });
+  const router = useRouter();
+  const handleNavigateHistory = () => {
+    router.push(`/admin/project/sprint-history`);
+
+  }
+  // Function to load sprints from API, made reusable
+  const loadSprints = async () => {
+    setIsLoadingSprints(true);
+    setSprintsError(null);
+    try {
+      const fetchedSprints: Sprint[] = await fetchSprintsHistory();
+      console.log("Fetched Sprints:", fetchedSprints); // Add this log
+      setSprints(fetchedSprints);
+      // Set an active sprint, e.g., the first 'Active' one or the first in the list
+      if (fetchedSprints.length > 0) {
+        const active = fetchedSprints.find(s => s.status === 'Active') || fetchedSprints[0];
+        console.log("Determined Active Sprint:", active); // Add this log
+        setActiveSprint(active);
+      }
+    } catch (err: any) {
+      setSprintsError(err.message || "Failed to fetch sprints.");
+    } finally {
+      setIsLoadingSprints(false);
+    }
+  };
+
+  // Effect to load sprints on component mount
+  useEffect(() => {
+    loadSprints();
+  }, []); // Empty dependency array means this runs once on mount
+
+  // newSprint and errors state are now managed inside CreateSprintDialog.tsx
+  // No need for these states here anymore.
+
 
   const { filteredTasks, boardColumns } = useMemo(() => {
     const lowerCaseQuery = searchQuery.toLowerCase().trim();
@@ -262,7 +286,7 @@ export function Sprints() {
       return task.title.toLowerCase().includes(lowerCaseQuery);
     });
 
-    const columnsToShow = isStatusQuery 
+    const columnsToShow = isStatusQuery
       ? ALL_STATUSES.filter(s => s.toLowerCase().replace(' ', '') === lowerCaseQuery.replace(' ', ''))
       : ALL_STATUSES;
 
@@ -275,9 +299,14 @@ export function Sprints() {
   const completedStoryPoints = useMemo(() => filteredTasks.filter(t => t.status === 'Done').reduce((sum, t) => sum + t.storyPoints, 0), [filteredTasks]);
   const progressPercent = activeSprint ? (completedStoryPoints / activeSprint.storyPointsTarget) * 100 : 0;
 
-  const totalCapacity = useMemo(() => {
-    return Object.values(newSprint.capacity || {}).reduce((sum, val) => sum + (val || 0), 0);
-  }, [newSprint.capacity]);
+  // This function now receives *validated* sprint data from CreateSprintDialog
+  const handleSaveNewSprint = async (sprintData: Partial<Sprint>) => { // Make async
+    // After successfully creating a sprint, re-fetch the entire list
+    // This ensures the local state is in sync with the backend
+    await loadSprints(); // Re-fetch all sprints
+    setIsCreateDialogOpen(false); // Close dialog
+  };
+
 
   // Lifecycle handlers
   const handleStartSprint = (id: string) => {
@@ -292,50 +321,6 @@ export function Sprints() {
     setSprints(prev => prev.map(s => s.id === id ? { ...s, status: 'Completed' } : s));
     setActiveTab('retrospective');
   };
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // Form Validation
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-    if (!newSprint.projectId) newErrors.projectId = "Project is required";
-    if (!newSprint.name) newErrors.name = "Sprint name is required";
-    if (!newSprint.startDate) newErrors.startDate = "Start date is required";
-    if (!newSprint.teamMembers?.length) newErrors.teamMembers = "At least one team member required";
-
-    // Check for overlapping active sprints
-    const activeExists = sprints.some(s => s.status === 'Active' && s.projectId === newSprint.projectId);
-    if (activeExists && newSprint.status === 'Active') {
-      newErrors.status = "Only one active sprint allowed per project";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleCreateSprint = () => {
-    if (!validateForm()) return;
-
-    const sprint: Sprint = {
-      ...(newSprint as Sprint),
-      id: `SP-00${sprints.length + 1}`,
-      number: `Sprint 0${sprints.length + 1}`,
-      startDate: newSprint.startDate || format(new Date(), 'yyyy-MM-dd'),
-      endDate: newSprint.endDate || format(addWeeks(new Date(), newSprint.durationWeeks || 2), 'yyyy-MM-dd'),
-      status: 'Planned',
-      totalCapacity: totalCapacity,
-    } as Sprint;
-    setSprints([...sprints, sprint]);
-    setIsCreateDialogOpen(false);
-  };
-
-  // Date Calculation logic
-  useEffect(() => {
-    if (newSprint.startDate && newSprint.durationWeeks) {
-      const end = addWeeks(new Date(newSprint.startDate), newSprint.durationWeeks);
-      setNewSprint(prev => ({ ...prev, endDate: format(end, 'yyyy-MM-dd') }));
-    }
-  }, [newSprint.startDate, newSprint.durationWeeks]);
 
   // DND Handlers
   const sensors = useSensors(
@@ -358,7 +343,7 @@ export function Sprints() {
   };
 
   return (
-    <div className="container mx-auto flex flex-col min-h-screen p-4 sm:p-6 lg:p-2 space-y-8">
+    <div className="container mx-auto flex flex-col min-h-screen p-2 space-y-8">
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -371,19 +356,17 @@ export function Sprints() {
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Sprint Management</h1>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2" onClick={handleNavigateHistory}>
             <History className="w-4 h-4" />
             Sprint History
           </Button>
+          {/* CreateSprintDialog now receives the onSaveSprint prop */}
           <CreateSprintDialog
             isCreateDialogOpen={isCreateDialogOpen}
             setIsCreateDialogOpen={setIsCreateDialogOpen}
-            handleCreateSprint={handleCreateSprint}
-            newSprint={newSprint}
-            setNewSprint={setNewSprint}
-            errors={errors}
+            onSaveSprint={handleSaveNewSprint} // Pass the new handler
             sprintsLength={sprints.length}
-            allSprints={sprints}
+            allSprints={sprints} // Still needed for cross-sprint validation
           />
         </div>
       </div>
@@ -467,8 +450,8 @@ export function Sprints() {
       {/* Navigation Tabs */}
       <Tabs defaultValue="board" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-card p-4 rounded-xl border shadow-sm">
-          <TabsList className="bg-transparent border-none w-full sm:w-auto overflow-x-auto justify-start h-auto p-1">
-            <TabsTrigger value="board" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg gap-2 text-xs sm:text-sm py-2 px-3">
+          <TabsList className="bg-transparent border-none w-[280px] sm:w-full overflow-x-auto justify-start h-auto p-2">
+            <TabsTrigger value="board" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg gap-2 text-md sm:text-md py-2 px-3">
               <LayoutGrid className="w-4 h-4" />
               Sprint Board
             </TabsTrigger>
@@ -486,11 +469,11 @@ export function Sprints() {
             </TabsTrigger>
           </TabsList>
 
-          <div className="flex items-center gap-2 px-2">
-            <Button variant="outline" size="icon" className="h-9 w-9">
-              <Filter className="h-4 w-4" />
-            </Button>
-          </div>
+          {/* <div className="flex items-center gap-2 px-2">
+              <Button variant="outline" size="icon" className="h-9 w-9">
+                <Filter className="h-4 w-4" />
+              </Button>
+            </div> */}
         </div>
 
         {/* 4. SPRINT BOARD */}
@@ -507,7 +490,7 @@ export function Sprints() {
         </TabsContent>
 
         {/* 3. SPRINT BACKLOG */}
-        <TabsContent value="backlog" className="mt-0">
+        <TabsContent value="backlog" className="mt-0 ">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <Card className="lg:col-span-2">
               <CardHeader className="pb-3 flex flex-row items-center justify-between">
@@ -517,8 +500,8 @@ export function Sprints() {
                 </div>
                 <Badge variant="outline" className="font-mono">{filteredTasks.length} Tasks</Badge>
               </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[500px] pr-4">
+              <CardContent className=''>
+                <ScrollArea className="h-[500px]    pr-4">
                   <div className="space-y-2">
                     {filteredTasks.map((task) => (
                       <div key={task.id} className="flex items-center gap-4 p-3 border rounded-lg hover:bg-muted/50 transition-colors group">
@@ -567,73 +550,73 @@ export function Sprints() {
             </Card>
 
             <div className="lg:col-span-1 space-y-6">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle>Project Backlog</CardTitle>
-                    <CardDescription>Drag to Sprint</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ScrollArea className="h-[300px] pr-4">
-                      <div className="space-y-3">
-                        {projectBacklog.map((task) => (
-                          <div
-                            key={task.id}
-                            className="p-3 border rounded-lg bg-muted/50 hover:bg-background hover:border-primary transition-all cursor-pointer group"
-                            onClick={() => {
-                              if (totalStoryPoints + task.storyPoints > (activeSprint?.storyPointsTarget || 100)) {
-                                alert("Warning: This task will exceed sprint capacity target!");
-                              }
-                              setTasks([...tasks, task]);
-                              setProjectBacklog(projectBacklog.filter(t => t.id !== task.id));
-                            }}
-                          >
-                            <div className="flex justify-between items-start mb-2">
-                              <Badge variant="outline" className="text-[9px] h-4">{task.priority}</Badge>
-                              <Plus className="w-3 h-3 text-slate-400 group-hover:text-primary" />
-                            </div>
-                            <h4 className="text-xs font-medium leading-tight">{task.title}</h4>
-                            <div className="flex items-center justify-between mt-2">
-                              <span className="text-[9px] text-muted-foreground font-mono">{task.id}</span>
-                              <span className="text-[9px] font-bold">{task.storyPoints} SP</span>
-                            </div>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle>Project Backlog</CardTitle>
+                  <CardDescription>Drag to Sprint</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[300px] pr-4">
+                    <div className="space-y-3">
+                      {projectBacklog.map((task) => (
+                        <div
+                          key={task.id}
+                          className="p-3 border rounded-lg bg-muted/50 hover:bg-background hover:border-primary transition-all cursor-pointer group"
+                          onClick={() => {
+                            if (totalStoryPoints + task.storyPoints > (activeSprint?.storyPointsTarget || 100)) {
+                              alert("Warning: This task will exceed sprint capacity target!");
+                            }
+                            setTasks([...tasks, task]);
+                            setProjectBacklog(projectBacklog.filter(t => t.id !== task.id));
+                          }}
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <Badge variant="outline" className="text-[9px] h-4">{task.priority}</Badge>
+                            <Plus className="w-3 h-3 text-slate-400 group-hover:text-primary" />
                           </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">Resource Allocation</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {activeSprint && activeSprint.teamMembers.map(memberId => {
-                        const user = mockUsers.find(u => u.id === memberId);
-                        const userTasks = tasks.filter(t => t.assigneeId === memberId);
-                        const points = userTasks.reduce((sum, t) => sum + t.storyPoints, 0);
-                        const capacity = activeSprint.capacity[memberId] || 0;
-                        const load = (points * 4) / (capacity || 1) * 100; // Mock: 1 SP = 4 hours
-
-                        return (
-                          <div key={memberId} className="space-y-1.5">
-                            <div className="flex justify-between text-xs">
-                              <span className="font-medium">{user?.name}</span>
-                              <span className={load > 90 ? 'text-red-600 font-bold' : 'text-muted-foreground'}>{points} SP / {capacity}h</span>
-                            </div>
-                            <Progress value={load} className={`h-1.5 ${load > 90 ? 'bg-red-100 dark:bg-red-900/50 [&>div]:bg-red-500' : ''}`} />
+                          <h4 className="text-xs font-medium leading-tight">{task.title}</h4>
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-[9px] text-muted-foreground font-mono">{task.id}</span>
+                            <span className="text-[9px] font-bold">{task.storyPoints} SP</span>
                           </div>
-                        );
-                      })}
-                      {activeTab === 'backlog' && (
-                        <div className="bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-700/40 p-3 rounded-lg flex gap-3">
-                          <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
-                          <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
-                            <strong>Capacity Warning:</strong> Elena Rodriguez is currently at 110% capacity. Consider reassigning tasks.
-                          </p>
                         </div>
-                      )}
-                    </CardContent>
-                </Card>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Resource Allocation</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {activeSprint && activeSprint.teamMembers.map(memberId => {
+                    const user = mockUsers.find(u => u.id === memberId);
+                    const userTasks = tasks.filter(t => t.assigneeId === memberId);
+                    const points = userTasks.reduce((sum, t) => sum + t.storyPoints, 0);
+                    const capacity = activeSprint.capacity[memberId] || 0;
+                    const load = (points * 4) / (capacity || 1) * 100; // Mock: 1 SP = 4 hours
+
+                    return (
+                      <div key={memberId} className="space-y-1.5">
+                        <div className="flex justify-between text-xs">
+                          <span className="font-medium">{user?.name}</span>
+                          <span className={load > 90 ? 'text-red-600 font-bold' : 'text-muted-foreground'}>{points} SP / {capacity}h</span>
+                        </div>
+                        <Progress value={load} className={`h-1.5 ${load > 90 ? 'bg-red-100 dark:bg-red-900/50 [&>div]:bg-red-500' : ''}`} />
+                      </div>
+                    );
+                  })}
+                  {activeTab === 'backlog' && (
+                    <div className="bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-700/40 p-3 rounded-lg flex gap-3">
+                      <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                      <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                        <strong>Capacity Warning:</strong> Elena Rodriguez is currently at 110% capacity. Consider reassigning tasks.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </div>
         </TabsContent>
@@ -654,11 +637,11 @@ export function Sprints() {
                       <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
                       <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
                       <RechartsTooltip
-                        contentStyle={{ 
-                            background: 'hsl(var(--card))', 
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: 'var(--radius)', 
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)' 
+                        contentStyle={{
+                          background: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: 'var(--radius)',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
                         }}
                       />
                       <Line type="monotone" dataKey="ideal" stroke="hsl(var(--muted-foreground))" strokeDasharray="5 5" dot={false} strokeWidth={2} name="Ideal Burndown" />

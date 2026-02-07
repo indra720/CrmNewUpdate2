@@ -29,7 +29,7 @@ export const initialSprints: Sprint[] = [
       name: 'Authentication & Security',
       number: 'Sprint 01',
       goal: 'Implement OAuth and user role management',
-      type: 'Development',
+      type: 'development',
       durationWeeks: 2,
       startDate: '2025-01-20',
       endDate: '2025-02-03',

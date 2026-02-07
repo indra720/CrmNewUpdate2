@@ -31,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export function UserNav() {
   //console.log('UserNav: Component function called.'); // Added log
+
   const router = useRouter();
   const { toast } = useToast();
   const [userName, setUserName] = useState<string | null>(null);
@@ -39,7 +40,7 @@ export function UserNav() {
   const [userId, setUserId] = useState<string | null>(null);
 
   const [isMounted, setIsMounted] = useState(false);
-
+  
   useEffect(() => {
     setIsMounted(true);
     if (typeof window !== 'undefined') {
@@ -47,13 +48,6 @@ export function UserNav() {
       const storedUserEmail = localStorage.getItem('userEmail');
       const storedUserRole = localStorage.getItem('userRole');
       const storedUserId = localStorage.getItem('userId');
-
-      // console.log('UserNav: Data from localStorage:', {
-      //   storedUserName,
-      //   storedUserEmail,
-      //   storedUserRole,
-      //   storedUserId,
-      // });
 
       setUserName(storedUserName);
       setUserEmail(storedUserEmail);
@@ -63,12 +57,6 @@ export function UserNav() {
   }, []);
 
   if (!isMounted || !userName || !userEmail || !userRole) {
-    //console.log('UserNav: Not rendering due to missing data or not mounted.', {
-    //   isMounted,
-    //   userName,
-    //   userEmail,
-    //   userRole,
-    // });
     return null; // Don't render if not mounted or user data is missing
   }
 
@@ -142,6 +130,8 @@ export function UserNav() {
             <DropdownMenuShortcut>S</DropdownMenuShortcut>
           </DropdownMenuItem>
         </DropdownMenuGroup>
+
+
         <DropdownMenuSeparator />
         <AlertDialog>
             <AlertDialogTrigger asChild>

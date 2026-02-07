@@ -3,7 +3,7 @@ import { ReactNode } from "react";
 export async function toggleUserActiveStatus(
   userId: number,
   userType: string,
-  isActive: boolean
+  isActive: boolean,
 ): Promise<void> {
   const token = localStorage.getItem("authToken");
 
@@ -21,17 +21,14 @@ export async function toggleUserActiveStatus(
     // console.log("TOGGLE API: URL -", apiUrl);
     // console.log("TOGGLE API: Request Body -", requestData);
 
-    const response = await fetch(
-      apiUrl,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Token ${token}`,
-        },
-        body: JSON.stringify(requestData),
-      }
-    );
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${token}`,
+      },
+      body: JSON.stringify(requestData),
+    });
 
     // console.log("TOGGLE API: Response Status -", response.status);
     // console.log("TOGGLE API: Response OK -", response.ok);
@@ -40,7 +37,9 @@ export async function toggleUserActiveStatus(
       const errorData = await response.json();
       console.error("TOGGLE API: Error Response Data -", errorData);
       throw new Error(
-        errorData.message || errorData.detail || `HTTP error! status: ${response.status}`
+        errorData.message ||
+          errorData.detail ||
+          `HTTP error! status: ${response.status}`,
       );
     } else {
       const successData = await response.json();
@@ -52,14 +51,14 @@ export async function toggleUserActiveStatus(
   } catch (error: any) {
     //console.error("TOGGLE API: Caught Error -", error);
     throw new Error(
-      `Failed to toggle user status: ${error.message || "Unknown error"}`
+      `Failed to toggle user status: ${error.message || "Unknown error"}`,
     );
   }
 }
 
 // Funtion to fetch admin leads by tag because it's a same api call as the one used in the AdminLeadTable component.
 export async function fetchAdminLeadsByTag(
-  tag: string
+  tag: string,
 ): Promise<{ staff_leads: any[]; team_leads: any[] }> {
   const token = localStorage.getItem("authToken");
 
@@ -81,7 +80,7 @@ export async function fetchAdminLeadsByTag(
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -89,7 +88,7 @@ export async function fetchAdminLeadsByTag(
   } catch (error: any) {
     //console.error(`Failed to fetch leads for tag ${tag}:`, error);
     throw new Error(
-      `Failed to fetch leads: ${error.message || "Unknown error"}`
+      `Failed to fetch leads: ${error.message || "Unknown error"}`,
     );
   }
 }
@@ -99,7 +98,7 @@ export async function updateLeadStatusAndFollowUp(
   status: string,
   message: string,
   followUpDate: string,
-  followUpTime: string
+  followUpTime: string,
 ): Promise<any> {
   const token = localStorage.getItem("authToken");
 
@@ -122,13 +121,13 @@ export async function updateLeadStatusAndFollowUp(
           follow_up_date: followUpDate,
           follow_up_time: followUpTime,
         }),
-      }
+      },
     );
 
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -141,7 +140,7 @@ export async function updateLeadStatusAndFollowUp(
     throw new Error(
       `Failed to update lead status and follow-up: ${
         error.message || "Unknown error"
-      }`
+      }`,
     );
   }
 }
@@ -163,13 +162,13 @@ export async function fetchAdmins(): Promise<any[]> {
           "Content-Type": "application/json",
           Authorization: `Token ${token}`,
         },
-      }
+      },
     );
 
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -178,7 +177,7 @@ export async function fetchAdmins(): Promise<any[]> {
   } catch (error: any) {
     console.error("Failed to fetch admins:", error);
     throw new Error(
-      `Failed to fetch admins: ${error.message || "Unknown error"}`
+      `Failed to fetch admins: ${error.message || "Unknown error"}`,
     );
   }
 }
@@ -200,13 +199,13 @@ export async function fetchSuperuserStaffLeadsByTag(tag: string): Promise<any> {
           "Content-Type": "application/json",
           Authorization: `Token ${token}`,
         },
-      }
+      },
     );
 
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -219,7 +218,7 @@ export async function fetchSuperuserStaffLeadsByTag(tag: string): Promise<any> {
     throw new Error(
       `Failed to fetch superuser staff leads: ${
         error.message || "Unknown error"
-      }`
+      }`,
     );
   }
 }
@@ -242,13 +241,13 @@ export async function editTeamLeader(id: number, formData: any): Promise<any> {
           Authorization: `Token ${token}`,
         },
         body: JSON.stringify(formData),
-      }
+      },
     );
 
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -256,13 +255,13 @@ export async function editTeamLeader(id: number, formData: any): Promise<any> {
   } catch (error: any) {
     console.error("Failed to edit team leader:", error);
     throw new Error(
-      `Failed to edit team leader: ${error.message || "Unknown error"}`
+      `Failed to edit team leader: ${error.message || "Unknown error"}`,
     );
   }
 }
 
 export async function fetchSuperuserTeamLeaderLeadsByTag(
-  tag: string
+  tag: string,
 ): Promise<any> {
   const token = localStorage.getItem("authToken");
 
@@ -279,13 +278,13 @@ export async function fetchSuperuserTeamLeaderLeadsByTag(
           "Content-Type": "application/json",
           Authorization: `Token ${token}`,
         },
-      }
+      },
     );
 
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -298,13 +297,13 @@ export async function fetchSuperuserTeamLeaderLeadsByTag(
     throw new Error(
       `Failed to fetch superuser team leader leads: ${
         error.message || "Unknown error"
-      }`
+      }`,
     );
   }
 }
 
 export async function fetchSuperuserFreelancerLeadsByTag(
-  tag: string
+  tag: string,
 ): Promise<any> {
   const token = localStorage.getItem("authToken");
 
@@ -321,13 +320,13 @@ export async function fetchSuperuserFreelancerLeadsByTag(
           "Content-Type": "application/json",
           Authorization: `Token ${token}`,
         },
-      }
+      },
     );
 
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -340,7 +339,7 @@ export async function fetchSuperuserFreelancerLeadsByTag(
     throw new Error(
       `Failed to fetch superuser freelancer leads: ${
         error.message || "Unknown error"
-      }`
+      }`,
     );
   }
 }
@@ -361,7 +360,7 @@ export async function fetchAdminsForSelection(): Promise<any[]> {
           "Content-Type": "application/json",
           Authorization: ` Token ${token}`,
         },
-      }
+      },
     );
 
     if (!response.ok) {
@@ -373,7 +372,7 @@ export async function fetchAdminsForSelection(): Promise<any[]> {
   } catch (error: any) {
     console.error("Failed to fetch admins:", error);
     throw new Error(
-      `Failed to fetch admins: ${error.message || "Unknown error"}`
+      `Failed to fetch admins: ${error.message || "Unknown error"}`,
     );
   }
 }
@@ -394,7 +393,7 @@ export async function fetchTeamLeaders(): Promise<any[]> {
           "Content-Type": "application/json",
           Authorization: ` Token ${token}`,
         },
-      }
+      },
     );
 
     if (!response.ok) {
@@ -406,7 +405,7 @@ export async function fetchTeamLeaders(): Promise<any[]> {
   } catch (error: any) {
     console.error("Failed to fetch team leaders:", error);
     throw new Error(
-      `Failed to fetch team leaders: ${error.message || "Unknown error"}`
+      `Failed to fetch team leaders: ${error.message || "Unknown error"}`,
     );
   }
 }
@@ -414,7 +413,7 @@ export async function fetchTeamLeaders(): Promise<any[]> {
 // New function for Admin to fetch staff report data
 export async function fetchAdminStaffReport(
   startDate?: string,
-  endDate?: string
+  endDate?: string,
 ): Promise<any> {
   const token = localStorage.getItem("authToken");
 
@@ -446,7 +445,7 @@ export async function fetchAdminStaffReport(
       throw new Error(
         errorData.message ||
           errorData.detail ||
-          "Failed to fetch admin staff report data."
+          "Failed to fetch admin staff report data.",
       );
     }
 
@@ -456,7 +455,7 @@ export async function fetchAdminStaffReport(
     throw new Error(
       `Failed to fetch Admin Staff Report Data: ${
         error.message || "Unknown error"
-      }`
+      }`,
     );
   }
 }
@@ -478,13 +477,13 @@ export async function fetchTeamLeaderStaffList(): Promise<any[]> {
           "Content-Type": "application/json",
           Authorization: `Token ${token}`,
         },
-      }
+      },
     );
 
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.detail || `HTTP error! status: ${response.status}`
+        errorData.detail || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -495,7 +494,7 @@ export async function fetchTeamLeaderStaffList(): Promise<any[]> {
     throw new Error(
       `Failed to fetch Team Leader's staff list: ${
         error.message || "Unknown error"
-      }`
+      }`,
     );
   }
 }
@@ -526,13 +525,13 @@ export async function fetchInterestedLeads(search?: string): Promise<Lead[]> {
           "Content-Type": "application/json",
           Authorization: `Token ${token}`,
         },
-      }
+      },
     );
 
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -541,7 +540,7 @@ export async function fetchInterestedLeads(search?: string): Promise<Lead[]> {
   } catch (error: any) {
     //console.error("Failed to fetch interested leads:", error);
     throw new Error(
-      `Failed to fetch interested leads: ${error.message || "Unknown error"}`
+      `Failed to fetch interested leads: ${error.message || "Unknown error"}`,
     );
   }
 }
@@ -589,7 +588,7 @@ export interface LeadHistoryEntry {
 }
 
 export async function fetchLeadHistory(
-  leadId: string
+  leadId: string,
 ): Promise<LeadHistoryEntry[]> {
   const token = localStorage.getItem("authToken");
 
@@ -606,13 +605,13 @@ export async function fetchLeadHistory(
           "Content-Type": "application/json",
           Authorization: `Token ${token}`,
         },
-      }
+      },
     );
 
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -625,9 +624,8 @@ export async function fetchLeadHistory(
   } catch (error: any) {
     //console.error(`Failed to fetch history for lead ${leadId}:`, error);
     throw new Error(
-      `Failed to fetch lead history: ${error.message || "Unknown error"}`
+      `Failed to fetch lead history: ${error.message || "Unknown error"}`,
     );
-    
   }
 }
 
@@ -655,7 +653,7 @@ export async function fetchAdminLeadHistoryById(leadId: string): Promise<any> {
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -666,7 +664,7 @@ export async function fetchAdminLeadHistoryById(leadId: string): Promise<any> {
     //   error
     // );
     throw new Error(
-      `Failed to fetch Admin Lead History: ${error.message || "Unknown error"}`
+      `Failed to fetch Admin Lead History: ${error.message || "Unknown error"}`,
     );
   }
 }
@@ -677,7 +675,7 @@ export async function fetchLeadsForSuperuser(
   tag: string,
   source: string | null,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
 ): Promise<any> {
   const token = localStorage.getItem("authToken");
 
@@ -723,8 +721,6 @@ export async function fetchLeadsForSuperuser(
       url += `?${params.toString()}`;
     }
 
-    //console.log(`Fetching URL for source ${source}:`, url);
-
     const response = await fetch(
       url,
 
@@ -736,14 +732,14 @@ export async function fetchLeadsForSuperuser(
 
           Authorization: `Token ${token}`,
         },
-      }
+      },
     );
 
     if (!response.ok) {
       const errorData = await response.json();
 
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -755,7 +751,7 @@ export async function fetchLeadsForSuperuser(
     // );
 
     throw new Error(
-      `Failed to fetch leads: ${error.message || "Unknown error"}`
+      `Failed to fetch leads: ${error.message || "Unknown error"}`,
     );
   }
 }
@@ -787,14 +783,14 @@ export async function fetchLeadsForStaff(tag: string): Promise<any> {
 
           Authorization: `Token ${token}`,
         },
-      }
+      },
     );
 
     if (!response.ok) {
       const errorData = await response.json();
 
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -803,7 +799,7 @@ export async function fetchLeadsForStaff(tag: string): Promise<any> {
     //console.error(`Failed to fetch leads for tag ${tag} for staff:`, error);
 
     throw new Error(
-      `Failed to fetch leads: ${error.message || "Unknown error"}`
+      `Failed to fetch leads: ${error.message || "Unknown error"}`,
     );
   }
 }
@@ -817,7 +813,7 @@ export async function fetchStaffLeadsReport(tag: string): Promise<any> {
     throw new Error("Authentication token not found.");
   }
 
-  try {     
+  try {
     const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/api/staff/interested-leads/${tag}/`;
 
     //console.log(`Fetching staff leads report for tag ${tag}:`, url);
@@ -833,14 +829,14 @@ export async function fetchStaffLeadsReport(tag: string): Promise<any> {
 
           Authorization: `Token ${token}`,
         },
-      }
+      },
     );
 
     if (!response.ok) {
       const errorData = await response.json();
 
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -849,14 +845,14 @@ export async function fetchStaffLeadsReport(tag: string): Promise<any> {
     //console.error(`Failed to fetch staff leads report for tag ${tag}:`, error);
 
     throw new Error(
-      `Failed to fetch staff leads report: ${error.message || "Unknown error"}`
+      `Failed to fetch staff leads report: ${error.message || "Unknown error"}`,
     );
   }
 }
 
 // New function for Team Leader interested leads report
 export async function fetchTeamLeaderInterestedLeadsReport(
-  tag: string
+  tag: string,
 ): Promise<any> {
   const token = localStorage.getItem("authToken");
 
@@ -883,7 +879,7 @@ export async function fetchTeamLeaderInterestedLeadsReport(
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -896,14 +892,14 @@ export async function fetchTeamLeaderInterestedLeadsReport(
     throw new Error(
       `Failed to fetch Team Leader interested leads report: ${
         error.message || "Unknown error"
-      }`
+      }`,
     );
   }
 }
 
 // New function for Team Leader lost leads report
 export async function fetchTeamLeaderLostLeadsReport(
-  tag: string
+  tag: string,
 ): Promise<any> {
   const token = localStorage.getItem("authToken");
 
@@ -914,7 +910,7 @@ export async function fetchTeamLeaderLostLeadsReport(
   try {
     const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/api/team-leader/lost-leads/${tag}/`;
 
-   // console.log(`Fetching Team Leader lost leads report for tag ${tag}:`, url);
+    // console.log(`Fetching Team Leader lost leads report for tag ${tag}:`, url);
 
     const response = await fetch(url, {
       method: "GET",
@@ -927,7 +923,7 @@ export async function fetchTeamLeaderLostLeadsReport(
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -940,7 +936,7 @@ export async function fetchTeamLeaderLostLeadsReport(
     throw new Error(
       `Failed to fetch Team Leader lost leads report: ${
         error.message || "Unknown error"
-      }`
+      }`,
     );
   }
 }
@@ -948,7 +944,7 @@ export async function fetchTeamLeaderLostLeadsReport(
 // New common function for Team Leader staff leads reports by tag
 export async function fetchTeamLeaderStaffLeadsReportByTag(
   staffId: number,
-  tag: string
+  tag: string,
 ): Promise<any> {
   const token = localStorage.getItem("authToken");
 
@@ -975,7 +971,7 @@ export async function fetchTeamLeaderStaffLeadsReportByTag(
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -988,14 +984,18 @@ export async function fetchTeamLeaderStaffLeadsReportByTag(
     throw new Error(
       `Failed to fetch Team Leader staff leads report: ${
         error.message || "Unknown error"
-      }`
+      }`,
     );
   }
 }
 
 // New function for Admin to fetch staff leads by tag
 export async function fetchAdminStaffLeadsByTag(
-staffId: number, tag: string, formattedStartDate: string | undefined, formattedEndDate: string | undefined): Promise<any> {
+  staffId: number,
+  tag: string,
+  formattedStartDate: string | undefined,
+  formattedEndDate: string | undefined,
+): Promise<any> {
   const token = localStorage.getItem("authToken");
 
   if (!token) {
@@ -1021,7 +1021,7 @@ staffId: number, tag: string, formattedStartDate: string | undefined, formattedE
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -1032,13 +1032,17 @@ staffId: number, tag: string, formattedStartDate: string | undefined, formattedE
     //   error
     // );
     throw new Error(
-      `Failed to fetch Admin staff leads: ${error.message || "Unknown error"}`
+      `Failed to fetch Admin staff leads: ${error.message || "Unknown error"}`,
     );
   }
 }
 
 // New function for Team Leader to fetch their own customer data by tag
-export async function getTeamCustomersByTag(tag: string, formattedStartDate: string | undefined, formattedEndDate: string | undefined): Promise<any> {
+export async function getTeamCustomersByTag(
+  tag: string,
+  formattedStartDate: string | undefined,
+  formattedEndDate: string | undefined,
+): Promise<any> {
   const token = localStorage.getItem("authToken");
 
   if (!token) {
@@ -1047,7 +1051,7 @@ export async function getTeamCustomersByTag(tag: string, formattedStartDate: str
 
   try {
     let url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/api/teamcustomer/${tag}/`;
-    
+
     // NO DATE PARAMETERS HERE
     // const params = new URLSearchParams();
     // if (startDate) params.append("start_date", startDate);
@@ -1069,7 +1073,7 @@ export async function getTeamCustomersByTag(tag: string, formattedStartDate: str
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -1082,7 +1086,7 @@ export async function getTeamCustomersByTag(tag: string, formattedStartDate: str
     throw new Error(
       `Failed to fetch Team Leader customers: ${
         error.message || "Unknown error"
-      }`
+      }`,
     );
   }
 }
@@ -1092,7 +1096,7 @@ export async function getTeamCustomerLeads(
   tag: string,
   search?: string,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
 ): Promise<any> {
   const token = localStorage.getItem("authToken");
 
@@ -1129,7 +1133,7 @@ export async function getTeamCustomerLeads(
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -1142,11 +1146,10 @@ export async function getTeamCustomerLeads(
     throw new Error(
       `Failed to fetch Team Customer leads: ${
         error.message || "Unknown error"
-      }`
+      }`,
     );
   }
 }
-
 
 // New function for Team Leader to fetch their own visit leads data
 export async function fetchTeamLeaderVisitLeads(): Promise<any> {
@@ -1172,7 +1175,7 @@ export async function fetchTeamLeaderVisitLeads(): Promise<any> {
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -1182,7 +1185,7 @@ export async function fetchTeamLeaderVisitLeads(): Promise<any> {
     throw new Error(
       `Failed to fetch Team Leader visit leads: ${
         error.message || "Unknown error"
-      }`
+      }`,
     );
   }
 }
@@ -1211,7 +1214,7 @@ export async function fetchTeamLeaderLeadsPageData(): Promise<any> {
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -1221,7 +1224,7 @@ export async function fetchTeamLeaderLeadsPageData(): Promise<any> {
     throw new Error(
       `Failed to fetch Team Leader leads page data: ${
         error.message || "Unknown error"
-      }`
+      }`,
     );
   }
 }
@@ -1250,7 +1253,7 @@ export async function fetchTeamLeaderAllLeadsByTag(tag: string): Promise<any> {
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -1263,21 +1266,19 @@ export async function fetchTeamLeaderAllLeadsByTag(tag: string): Promise<any> {
     throw new Error(
       `Failed to fetch Team Leader all leads report: ${
         error.message || "Unknown error"
-      }`
+      }`,
     );
   }
 }
 
 // New function to export Team Leader leads
-export async function exportTeamLeaderLeads(
-  payload: {
-    status: string;
-    start_date?: string;
-    end_date?: string;
-    staff_id?: string; // Optional staff_id
-    all_interested?: string; // '1' or '0'
-  }
-): Promise<void> {
+export async function exportTeamLeaderLeads(payload: {
+  status: string;
+  start_date?: string;
+  end_date?: string;
+  staff_id?: string; // Optional staff_id
+  all_interested?: string; // '1' or '0'
+}): Promise<void> {
   const token = localStorage.getItem("authToken");
 
   if (!token) {
@@ -1286,7 +1287,7 @@ export async function exportTeamLeaderLeads(
 
   try {
     const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/api/team-leader/export-leads/`; // Corrected URL
-    // console.log("Attempting to export from URL:", url); 
+    // console.log("Attempting to export from URL:", url);
     // console.log("Request body:", JSON.stringify(payload)); // Log the payload
 
     const response = await fetch(url, {
@@ -1303,7 +1304,7 @@ export async function exportTeamLeaderLeads(
       try {
         const errorData = await response.json();
         throw new Error(
-          errorData.message || errorData.error || "Failed to export leads."
+          errorData.message || errorData.error || "Failed to export leads.",
         );
       } catch (e) {
         // If not JSON, use status text
@@ -1332,16 +1333,15 @@ export async function exportTeamLeaderLeads(
   } catch (error: any) {
     //console.error(`Failed to export leads for status ${payload.status}:`, error);
     throw new Error(
-      `Failed to export leads: ${error.message || "Unknown error"}`
+      `Failed to export leads: ${error.message || "Unknown error"}`,
     );
   }
 }
 
-
-// New function to fetch Admin Team Leader Report Data
+// New function for Admin to fetch Team Leader Report Data
 export async function fetchAdminTeamLeaderReportData(
   startDate?: string,
-  endDate?: string
+  endDate?: string,
 ): Promise<any> {
   const token = localStorage.getItem("authToken");
 
@@ -1371,7 +1371,7 @@ export async function fetchAdminTeamLeaderReportData(
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -1379,7 +1379,7 @@ export async function fetchAdminTeamLeaderReportData(
   } catch (error: any) {
     //console.error(`Failed to fetch Admin Team Leaders:`, error);
     throw new Error(
-      `Failed to fetch Admin Team Leaders: ${error.message || "Unknown error"}`
+      `Failed to fetch Admin Team Leaders: ${error.message || "Unknown error"}`,
     );
   }
 }
@@ -1387,7 +1387,7 @@ export async function fetchAdminTeamLeaderReportData(
 // users ke teamleader ke page me data fetching
 export async function fetchAdminTeamLeaders(
   startDate?: string,
-  endDate?: string
+  endDate?: string,
 ): Promise<any> {
   const token = localStorage.getItem("authToken");
 
@@ -1417,7 +1417,7 @@ export async function fetchAdminTeamLeaders(
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -1425,16 +1425,15 @@ export async function fetchAdminTeamLeaders(
   } catch (error: any) {
     //console.error(`Failed to fetch Admin Team Leaders:`, error);
     throw new Error(
-      `Failed to fetch Admin Team Leaders: ${error.message || "Unknown error"}`
+      `Failed to fetch Admin Team Leaders: ${error.message || "Unknown error"}`,
     );
   }
 }
 
-
 // users ke staff ke page me data fetching
 export async function fetchAdminStaffs(
   startDate?: string,
-  endDate?: string
+  endDate?: string,
 ): Promise<any> {
   const token = localStorage.getItem("authToken");
 
@@ -1457,21 +1456,25 @@ export async function fetchAdminStaffs(
 
     //console.log(`Fetching Admin Staffs:`, url);
 
-    const response = await fetch(url, {
-      method: "GET",
+    const response = await fetch(
+      url,
 
-      headers: {
-        "Content-Type": "application/json",
+      {
+        method: "GET",
 
-        Authorization: `Token ${token}`,
+        headers: {
+          "Content-Type": "application/json",
+
+          Authorization: `Token ${token}`,
+        },
       },
-    });
+    );
 
     if (!response.ok) {
       const errorData = await response.json();
 
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -1480,7 +1483,7 @@ export async function fetchAdminStaffs(
     //console.error(`Failed to fetch Admin Staffs:`, error);
 
     throw new Error(
-      `Failed to fetch Admin Staffs: ${error.message || "Unknown error"}`
+      `Failed to fetch Admin Staffs: ${error.message || "Unknown error"}`,
     );
   }
 }
@@ -1489,7 +1492,7 @@ export async function fetchAdminStaffs(
 export async function fetchAdminStaffIncentive(
   staffId: number,
   year: number,
-  month: number
+  month: number,
 ): Promise<any> {
   const token = localStorage.getItem("authToken");
 
@@ -1520,7 +1523,7 @@ export async function fetchAdminStaffIncentive(
       const errorData = await response.json();
 
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -1531,7 +1534,7 @@ export async function fetchAdminStaffIncentive(
     throw new Error(
       `Failed to fetch Admin staff incentive: ${
         error.message || "Unknown error"
-      }`
+      }`,
     );
   }
 }
@@ -1540,7 +1543,7 @@ export async function fetchAdminStaffIncentive(
 export async function fetchAdminStaffLeadsKpiCountByTag(
   tag: string,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
 ): Promise<number> {
   const token = localStorage.getItem("authToken");
 
@@ -1570,12 +1573,11 @@ export async function fetchAdminStaffLeadsKpiCountByTag(
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
     const data = await response.json();
-    
 
     // Special handling for 'total_earning' until backend clarifies
     if (tag === "total_earning") {
@@ -1588,14 +1590,14 @@ export async function fetchAdminStaffLeadsKpiCountByTag(
     return data.count !== undefined
       ? data.count
       : data.results
-      ? data.results.length
-      : 0;
+        ? data.results.length
+        : 0;
   } catch (error: any) {
     //console.error(`Failed to fetch Admin staff leads KPI count for tag ${tag}:`,error );
     throw new Error(
       `Failed to fetch Admin staff leads KPI count: ${
         error.message || "Unknown error"
-      }`
+      }`,
     );
   }
 }
@@ -1604,7 +1606,7 @@ export async function fetchAdminStaffLeadsKpiCountByTag(
 export async function fetchAdminnStaffLeadsKpiCountByTag(
   tag: string,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
 ): Promise<number> {
   const token = localStorage.getItem("authToken");
 
@@ -1621,7 +1623,7 @@ export async function fetchAdminnStaffLeadsKpiCountByTag(
       url += `?${params.toString()}`;
     }
 
-   // console.log(`Fetching Admin (new) staff leads KPI count for tag ${tag}:`, url);
+    // console.log(`Fetching Admin (new) staff leads KPI count for tag ${tag}:`, url);
 
     const response = await fetch(url, {
       method: "GET",
@@ -1633,31 +1635,31 @@ export async function fetchAdminnStaffLeadsKpiCountByTag(
 
     if (!response.ok) {
       const errorData = await response.json();
+
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
     const data = await response.json();
-    
+
     // Assuming the API returns a paginated response with a 'count' field for leads
     // The backend code in comment returns a list of leads, not a sum.
     // So, we'll try to get the count of items.
     return data.count !== undefined
       ? data.count
       : data.results
-      ? data.results.length
-      : 0;
+        ? data.results.length
+        : 0;
   } catch (error: any) {
     //console.error(`Failed to fetch Admin (new) staff leads KPI count for tag ${tag}:`, error);
     throw new Error(
       `Failed to fetch Admin (new) staff leads KPI count: ${
         error.message || "Unknown error"
-      }`
+      }`,
     );
   }
 }
-
 
 // New function for Admin to fetch total leads
 export async function fetchAdminTotalLeads(): Promise<any> {
@@ -1683,7 +1685,7 @@ export async function fetchAdminTotalLeads(): Promise<any> {
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -1691,7 +1693,7 @@ export async function fetchAdminTotalLeads(): Promise<any> {
   } catch (error: any) {
     //console.error(`Failed to fetch Admin Total Leads:`, error);
     throw new Error(
-      `Failed to fetch Admin Total Leads: ${error.message || "Unknown error"}`
+      `Failed to fetch Admin Total Leads: ${error.message || "Unknown error"}`,
     );
   }
 }
@@ -1728,7 +1730,7 @@ export async function addAdminLead(leadData: {
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -1736,14 +1738,14 @@ export async function addAdminLead(leadData: {
   } catch (error: any) {
     //console.error(`Failed to add Admin Lead:`, error);
     throw new Error(
-      `Failed to add Admin Lead: ${error.message || "Unknown error"}`
+      `Failed to add Admin Lead: ${error.message || "Unknown error"}`,
     );
   }
 }
 
 // New function for Admin to fetch lead history by ID
 export async function fetchAdminDashboardLeadHistoryById(
-  leadId: string
+  leadId: string,
 ): Promise<any> {
   const token = localStorage.getItem("authToken");
 
@@ -1767,7 +1769,7 @@ export async function fetchAdminDashboardLeadHistoryById(
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -1775,16 +1777,10 @@ export async function fetchAdminDashboardLeadHistoryById(
   } catch (error: any) {
     //console.error(`Failed to fetch Admin Lead History for Lead ID ${leadId}:`,error);
     throw new Error(
-      `Failed to fetch Admin Lead History: ${error.message || "Unknown error"}`
+      `Failed to fetch Admin Lead History: ${error.message || "Unknown error"}`,
     );
   }
 }
-
-
-
-
-
-
 
 // leads report pages leads update api
 export async function updateAdminLeadStatus(
@@ -1792,7 +1788,7 @@ export async function updateAdminLeadStatus(
   status: string,
   message?: string,
   followUpDate?: string,
-  followUpTime?: string
+  followUpTime?: string,
 ): Promise<any> {
   const token = localStorage.getItem("authToken");
 
@@ -1831,7 +1827,7 @@ export async function updateAdminLeadStatus(
       const errorData = await response.json();
       //console.error("API Error Response:", errorData);
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -1839,14 +1835,16 @@ export async function updateAdminLeadStatus(
   } catch (error: any) {
     //console.error(`Failed to update Admin Lead Status for Lead ID ${leadId}:`,error);
     throw new Error(
-      `Failed to update Admin Lead Status: ${error.message || "Unknown error"}`
+      `Failed to update Admin Lead Status: ${error.message || "Unknown error"}`,
     );
   }
 }
 
-
 // Function to fetch current logged-in user's profile
-export async function fetchCurrentUserProfile(): Promise<{ name: string; email: string; /* ... other profile fields */ }> {
+export async function fetchCurrentUserProfile(): Promise<{
+  name: string;
+  email: string; /* ... other profile fields */
+}> {
   const token = localStorage.getItem("authToken");
 
   if (!token) {
@@ -1867,17 +1865,45 @@ export async function fetchCurrentUserProfile(): Promise<{ name: string; email: 
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`,
+      );
     }
 
     return await response.json();
   } catch (error: any) {
     //console.error(`Failed to fetch current user profile:`, error);
-    throw new Error(`Failed to fetch user profile: ${error.message || "Unknown error"}`);
+    throw new Error(
+      `Failed to fetch user profile: ${error.message || "Unknown error"}`,
+    );
   }
 }
 
-import { Project } from "@/types"; // Assuming Project is defined here or accessible
+// new function to fetch projects
+import { Project, Sprint, Milestone, Task } from "@/types";
+
+// Map for converting numeric day representation (1=Mon, 7=Sun) to backend's expected string abbreviation
+const DAYS_OF_WEEK_MAP: { [key: number]: string } = {
+  1: "mon",
+  2: "tue",
+  3: "wed",
+  4: "thu",
+  5: "fri",
+  6: "sat",
+  7: "sun",
+};
+
+// Map for converting string day abbreviation to numeric day representation
+const DAYS_OF_WEEK_REVERSE_MAP: { [key: string]: number } = {
+  mon: 1,
+  tue: 2,
+  wed: 3,
+  thu: 4,
+  fri: 5,
+  sat: 6,
+  sun: 7,
+};
+
 export async function fetchProjects(): Promise<Project[]> {
   const token = localStorage.getItem("authToken");
 
@@ -1886,39 +1912,289 @@ export async function fetchProjects(): Promise<Project[]> {
   }
 
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/projects/`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Token ${token}`,
-      }
-    });
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/projects/`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${token}`,
+        },
+      },
+    );
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`,
+      );
     }
 
     const data = await response.json();
-    const projectsFromApi = Array.isArray(data) ? data : (data.results || []);
+    const projectsFromApi = Array.isArray(data) ? data : data.results || [];
 
-    const transformedProjects: Project[] = projectsFromApi.map((project: any) => ({
-      ...project,
-      startDate: project.start_date,
-      endDate: project.end_date,
-      // Ensure other fields match the Project interface, or provide defaults/transformations
-      // For example, if project.status is a string but Project.status is a specific enum:
-      // status: project.status as ProjectStatus,
-    }));
+    // Fetch members for all projects concurrently
+    const projectsWithMembersPromises = projectsFromApi.map(
+      async (project: any) => {
+        try {
+          const members = await fetchProjectMembersForProjectCard(project.id);
+          return {
+            ...project,
+            startDate: project.start_date,
+            endDate: project.end_date,
+            members: members.map((member) => ({
+              name: member.user_name,
+              role: member.role,
+            })), // Map to { name: string, role: string }
+          };
+        } catch (memberError) {
+          console.error(
+            `Error fetching members for project ${project.id}:`,
+            memberError,
+          );
+          return {
+            ...project,
+            startDate: project.start_date,
+            endDate: project.end_date,
+            members: [], // Return empty array if fetching members fails
+          };
+        }
+      },
+    );
+
+    const transformedProjects = await Promise.all(projectsWithMembersPromises);
 
     return transformedProjects;
   } catch (error: any) {
     console.error("Failed to fetch projects:", error);
-    throw new Error(`Failed to fetch projects: ${error.message || "Unknown error"}`);
+    throw new Error(
+      `Failed to fetch projects: ${error.message || "Unknown error"}`,
+    );
   }
 }
 
+// Define the interface for a project member as received from the API
+interface ProjectMember {
+  id: string; // ProjectMember ID (UUID)
+  user_name: string;
+  project_name: string;
+  role: string;
+  user: number; // Numeric user ID for the backend API
+  // Add other fields from the API response if needed
+}
 
+export async function fetchProjectMembersForProjectCard(
+  projectId: string,
+): Promise<ProjectMember[]> {
+  const token = localStorage.getItem("authToken");
 
+  if (!token) {
+    throw new Error("Authentication token not found.");
+  }
 
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/project-members/?project=${projectId}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${token}`,
+        },
+      },
+    );
 
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`,
+      );
+    }
+
+    const data = await response.json();
+    return data.results || [];
+  } catch (error: any) {
+    console.error("Failed to fetch project members:", error);
+    throw new Error(
+      `Failed to fetch project members: ${error.message || "Unknown error"}`,
+    );
+  }
+}
+
+export async function fetchSprints(projectId?: string): Promise<Sprint[]> {
+  const token = localStorage.getItem("authToken");
+
+  if (!token) {
+    throw new Error("Authentication token not found.");
+  }
+
+  try {
+    let url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/sprints/`;
+    if (projectId) {
+      url += `?project=${projectId}`;
+    }
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`,
+      );
+    }
+
+    const data = await response.json();
+    return data.results || [];
+  } catch (error: any) {
+    console.error("Failed to fetch sprints:", error);
+    throw new Error(
+      `Failed to fetch sprints: ${error.message || "Unknown error"}`,
+    );
+  }
+}
+
+export async function fetchMilestones(projectId?: string): Promise<Milestone[]> {
+  const token = localStorage.getItem("authToken");
+
+  if (!token) {
+    throw new Error("Authentication token not found.");
+  }
+
+  try {
+    let url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/milestones/`;
+    if (projectId) {
+      url += `?project=${projectId}`;
+    }
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`,
+      );
+    }
+
+    const data = await response.json();
+    return data.results || [];
+  } catch (error: any) {
+    console.error("Failed to fetch milestones:", error);
+    throw new Error(
+      `Failed to fetch milestones: ${error.message || "Unknown error"}`,
+    );
+  }
+}
+
+interface TaskPayload {
+  title: string;
+  description?: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  status: 'todo' | 'in_progress' | 'review' | 'done' | 'blocked';
+  due_date: string; // YYYY-MM-DD
+  project: string; // UUID
+  assigned_to?: number; // User ID
+  sprint?: string; // UUID
+  milestone?: string; // UUID
+  // Optional fields not in form
+  position?: number;
+  estimated_hours?: number;
+}
+
+export async function createTask(taskData: TaskPayload): Promise<any> {
+  const token = localStorage.getItem("authToken");
+
+  if (!token) {
+    throw new Error("Authentication token not found.");
+  }
+
+  try {
+    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/tasks/`;
+    console.log("Creating task with payload:", taskData); // Log payload
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${token}`,
+      },
+      body: JSON.stringify(taskData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Create task API error:", errorData);
+      throw new Error(
+        errorData.message || errorData.detail || `HTTP error! status: ${response.status}`,
+      );
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    console.error("Failed to create task:", error);
+    throw new Error(
+      `Failed to create task: ${error.message || "Unknown error"}`,
+    );
+  }
+}
+
+export interface MilestonePayload {
+  project: string; // UUID
+  sprint: string | null; // UUID
+  title: string;
+  code: string;
+  description: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  due_date: string; // YYYY-MM-DD
+  owner: number | null; // User ID
+  status: 'not_started' | 'in_progress' | 'blocked' | 'completed';
+  criteria: Array<{ title: string; is_completed: boolean; }>;
+}
+
+export async function createMilestone(milestoneData: MilestonePayload): Promise<any> {
+  const token = localStorage.getItem("authToken");
+
+  if (!token) {
+    throw new Error("Authentication token not found.");
+  }
+
+  try {
+    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/milestones/`;
+    console.log("Creating milestone with payload:", milestoneData);
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${token}`,
+      },
+      body: JSON.stringify(milestoneData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Create milestone API error:", errorData);
+      throw new Error(
+        errorData.message || errorData.detail || `HTTP error! status: ${response.status}`,
+      );
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    console.error("Failed to create milestone:", error);
+    throw new Error(
+      `Failed to create milestone: ${error.message || "Unknown error"}`,
+    );
+  }
+}

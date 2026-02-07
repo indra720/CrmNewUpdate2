@@ -108,7 +108,6 @@ export default function ProjectDetails({ params }: ProjectDetailsPageProps) {
         endDate: data.end_date,
       });
 
-      setMembers(data.members || []);
       setCurrentProjectTasks(data.tasks || []);
       setProjectActivities(data.activities || []);
 
@@ -119,9 +118,39 @@ export default function ProjectDetails({ params }: ProjectDetailsPageProps) {
     }
   }, [params.id]);
 
+  const fetchProjectMembers = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/project-members/?project=${params.id}`,
+        {
+          headers: {
+            Authorization: `Token ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch members");
+      }
+
+      const data = await response.json();
+      // Assuming the API returns a 'results' array as per the provided JSON snippet
+      setMembers(data.results || []);
+    } catch (error) {
+      console.error("Members fetch error:", error);
+      // Optionally, you might want to set an error state here as well
+    }
+  }, [params.id]);
+
   useEffect(() => {
     fetchProjectById();
   }, [fetchProjectById]);
+
+  useEffect(() => {
+    fetchProjectMembers();
+  }, [fetchProjectMembers]);
+
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -195,7 +224,7 @@ export default function ProjectDetails({ params }: ProjectDetailsPageProps) {
   if (!project) {
     return <div className="text-center py-12">Project not found.</div>;
   }
-  
+
   const onTaskAdd = (newTaskData: {
     title: string;
     description?: string;
@@ -210,7 +239,7 @@ export default function ProjectDetails({ params }: ProjectDetailsPageProps) {
 
     const fullTask: ProjectTask = {
       id: Math.floor(Math.random() * 100000),
-      projectId: project.id,
+      projectId: Number(project.id),
       title: newTaskData.title,
       status: statusMap[newTaskData.status] || 'todo',
       priority: newTaskData.priority,
@@ -242,14 +271,22 @@ export default function ProjectDetails({ params }: ProjectDetailsPageProps) {
     setIsTaskViewOpen(true);
   };
 
-  const handleTaskStatusChange = (taskId: number, newStatus: 'To Do' | 'In Progress' | 'Done') => {
-    const statusMap: { [key: string]: string } = { 'To Do': 'todo', 'In Progress': 'in_progress', 'Done': 'done' };
-    setCurrentProjectTasks(prevTasks =>
-      prevTasks.map(task =>
-        task.id === taskId ? { ...task, status: statusMap[newStatus] } : task
-      )
-    );
-  };
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+  function handleTaskStatusChange(id: number, newStatus: string): void {
+    throw new Error('Function not implemented.');
+  }
 
   return (
     <div className="space-y-6">
@@ -392,27 +429,27 @@ export default function ProjectDetails({ params }: ProjectDetailsPageProps) {
             </CardHeader>
             <CardContent className="p-4 space-y-3">
               {members.map((member) => (
-                <div key={member.id || member.name} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                <div key={member.id || member.user_name} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
                   <Avatar className="h-10 w-10">
                     <AvatarFallback className="bg-primary/10 text-primary">
-                      {member.name ? member.name.charAt(0) : '?'}
+                      {member.user_name ? member.user_name.charAt(0) : '?'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-foreground truncate">
-                      {member.name || 'Unknown User'}
+                      {member.user_name || 'Unknown User'}
                     </p>
                     <p className="text-sm text-muted-foreground truncate">
                       {member.role || 'Member'}
                     </p>
                   </div>
                   <Badge variant="secondary">
-                    {currentProjectTasks.filter(t => t.assigneeId === member.id && t.projectId === project.id && t.status !== 'Done').length} Tasks
+                    {currentProjectTasks.filter(t => t.assigneeId === member.id && t.projectId === Number(project.id) && t.status !== 'Done').length} Tasks
                   </Badge>
                 </div>
               ))}
               <div className="flex justify-center mt-4">
-                <AddProjectMemberDialog />
+                <AddProjectMemberDialog projectId={String(project.id)} onMemberAdded={fetchProjectMembers} />
               </div>
             </CardContent>
           </Card>

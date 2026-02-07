@@ -81,7 +81,7 @@ export default function ProjectPage() {
           p.message.toLowerCase().includes(searchQuery.toLowerCase())
       )
     );
-  }, [search, projects]);
+  }, [ projects]);
 
   const toggleRow = (rowId: number) => {
     setExpandedRowId(expandedRowId === rowId ? null : rowId);
@@ -177,10 +177,10 @@ export default function ProjectPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold tracking-tight">Project Edit</h1>
 
-      <Card className="shadow-lg rounded-2xl">
+      <Card className="shadow-lg rounded-2xl ">
         <CardHeader>
-          <div className="flex flex-row items-center justify-between gap-2 px-2">
-
+          <div className="flex flex-row items-center justify-end gap-2 px-2">
+            
             <Button 
               onClick={() => setIsAddFormOpen(true)}
               className="flex-shrink-0"

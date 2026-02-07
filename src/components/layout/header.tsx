@@ -118,6 +118,9 @@ export function Header({ setSidebarOpen, isCollapsed }: { setSidebarOpen?: (open
     fetchNotifications();
   }, []);
 
+
+
+
   return (
     <header
       className={cn(
@@ -149,7 +152,7 @@ export function Header({ setSidebarOpen, isCollapsed }: { setSidebarOpen?: (open
         <div className="hidden md:block">
             <SearchBar />
         </div>
-        <ThemeToggle />
+
 
         {/* NOTIFICATION BUTTON */}
         <DropdownMenu>

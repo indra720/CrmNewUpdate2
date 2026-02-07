@@ -163,11 +163,11 @@ export const SUPERADMIN_SIDENAV_ITEMS = [
     path: '/superadmin/timesheet',
     icon: <Clock className="h-5 w-5" />,
   },
-  {
-    title: 'Project',
-    path: '/superadmin/project',
-    icon: <Presentation className="h-5 w-5" />,
-  },
+  // {
+  //   title: 'Project',
+  //   path: '/superadmin/project',
+  //   icon: <Presentation className="h-5 w-5" />,
+  // },
   {
     title: 'Projects',
     path: '/superadmin/projects',
