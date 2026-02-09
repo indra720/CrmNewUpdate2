@@ -10,10 +10,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Task } from '@/lib/mock-tasks';
+import { TaskViewTask } from '@/types';
 
 interface DeleteConfirmationDialogProps {
-  task: Task | null;
+  task: TaskViewTask | null;
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onConfirm: () => void;
@@ -33,7 +33,7 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({ tas
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm}>Delete</AlertDialogAction>
+          <AlertDialogAction onClick={() => { console.log('DeleteConfirmationDialog: Confirm button clicked.'); onConfirm(); }}>Delete</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

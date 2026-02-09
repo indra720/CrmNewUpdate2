@@ -1,7 +1,12 @@
 'use client';
 
-import { fetchProjects, fetchProjectMembersForProjectCard, fetchSprints, fetchMilestones, createTask } from '@/lib/api';
-import { Project, Sprint, Milestone, ProjectMember } from '@/types';
+import {
+  fetchProjects,
+  fetchProjectMembersForProjectCard,
+  fetchSprints,
+  fetchMilestones,
+} from '@/lib/api';
+import { Project, Sprint, Milestone, ProjectMember, Task, TaskViewTask } from '@/types';
 import { z } from 'zod';
 import { CalendarIcon, Plus, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -12,7 +17,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Form,
@@ -39,12 +43,12 @@ import { useEffect, useState, useRef } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-const addTaskSchema = z.object({
+const taskFormSchema = z.object({
   title: z.string().min(2, 'Title must be at least 2 characters.'),
   description: z.string().optional(),
   assignee: z.string().optional(),
   status: z.enum(['To Do', 'In Progress', 'Done']),
-  priority: z.enum(['low', 'medium', 'high', 'critical']),
+  priority: z.enum(['low', 'medium', 'high']),
   dueDate: z.date({
     required_error: 'A due date is required.',
   }),
@@ -54,10 +58,13 @@ const addTaskSchema = z.object({
   project: z.string().min(1, 'Project is required.'),
 });
 
-type AddTaskFormValues = z.infer<typeof addTaskSchema>;
+type TaskFormValues = z.infer<typeof taskFormSchema>;
 
-interface AddProjectTaskDialogProps {
-  onTaskAdd: (data: AddTaskFormValues) => void;
+interface TaskFormDialogProps {
+  initialTask?: TaskViewTask | null;
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+  onTaskSubmitted: (updatedTask?: TaskViewTask) => void; // Callback after add/edit
 }
 
 const statusMap = {
@@ -66,13 +73,60 @@ const statusMap = {
   "Done": "done",
 } as const;
 
+// Internal API functions (as per user's request)
+async function internalCreateTask(payload: Partial<Task>): Promise<Task> {
+  const token = localStorage.getItem("authToken");
+  if (!token) throw new Error("Authentication token not found.");
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/tasks/`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Token ${token}` },
+        body: JSON.stringify(payload),
+      },
+    );
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error: any) {
+    console.error("Failed to create task:", error);
+    throw new Error(`Failed to create task: ${error.message || "Unknown error"}`);
+  }
+}
 
-export function AddProjectTaskDialog({ onTaskAdd }: AddProjectTaskDialogProps) {
-  const [open, setOpen] = useState(false);
+async function internalUpdateTask(taskId: string, payload: Partial<Task>): Promise<Task> {
+  const token = localStorage.getItem("authToken");
+  if (!token) throw new Error("Authentication token not found.");
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/tasks/${taskId}/`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Token ${token}` },
+        body: JSON.stringify(payload),
+      },
+    );
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error: any) {
+    console.error(`Failed to update task ${taskId}:`, error);
+    throw new Error(`Failed to update task: ${error.message || "Unknown error"}`);
+  }
+}
+
+
+export function TaskFormDialog({ initialTask, isOpen, onOpenChange, onTaskSubmitted }: TaskFormDialogProps) {
   const { toast } = useToast();
+  const isEditMode = !!initialTask;
 
-  const form = useForm<AddTaskFormValues>({
-    resolver: zodResolver(addTaskSchema),
+  const form = useForm<TaskFormValues>({
+    resolver: zodResolver(taskFormSchema),
     defaultValues: {
       title: '',
       description: '',
@@ -110,17 +164,42 @@ export function AddProjectTaskDialog({ onTaskAdd }: AddProjectTaskDialogProps) {
   });
 
 
-
-  // Fetch Projects when dialog opens
+  // Reset form and populate on initialTask/isOpen change
   useEffect(() => {
-    if (!open) {
-      // Reset everything when dialog closes
+    if (isOpen) {
+      if (initialTask) {
+        // Edit mode: populate form with initialTask data
+        form.reset({
+          title: initialTask.title,
+          description: initialTask.description || '',
+          assignee: initialTask.assignee.name, // Will need to map assignee name to ID later
+          status: initialTask.status,
+          priority: initialTask.priority,
+          dueDate: initialTask.dueDate,
+          tags: initialTask.tags?.join(', ') || '',
+          // project, sprint, milestone will be set after projects are loaded
+        });
+      } else {
+        // Add mode: reset to default values
+        form.reset({
+          title: '',
+          description: '',
+          priority: 'medium',
+          status: 'To Do',
+          tags: '',
+          sprint: '',
+          milestone: '',
+          project: '',
+        });
+      }
+    } else {
+      // Dialog closed, reset all state
       form.reset();
       setProjects([]);
       setAssignees([]);
       setSprints([]);
       setMilestones([]);
-      setLoadingProjects(true);
+      setLoadingProjects(true); // Reset to true for next open
       setLoadingAssignees(false);
       setLoadingSprints(false);
       setLoadingMilestones(false);
@@ -128,22 +207,30 @@ export function AddProjectTaskDialog({ onTaskAdd }: AddProjectTaskDialogProps) {
       setAssigneeError(null);
       setSprintError(null);
       setMilestoneError(null);
-      return;
     }
+  }, [initialTask, isOpen, form]);
+
+
+  // Fetch Projects when dialog opens
+  useEffect(() => {
+    if (!isOpen) return;
 
     const loadProjects = async () => {
       setLoadingProjects(true);
       setProjectError(null);
       try {
-
-
         const data = await fetchProjects();
         setProjects(data);
-        if (data.length > 0) {
-          form.reset({
-            ...form.getValues(),
-            project: data[0].id,
-          });
+
+        // Set initial project if in edit mode and project exists in fetched data
+        if (isEditMode && initialTask && initialTask.project_name) {
+            const projectForTask = data.find(p => p.name === initialTask.project_name);
+            if (projectForTask) {
+                form.setValue('project', projectForTask.id);
+            }
+        } else if (data.length > 0 && !form.getValues('project')) {
+          // For add mode or if no initial project set, default to first project
+          form.setValue('project', data[0].id);
         }
       } catch (err: any) {
         setProjectError(err.message || 'Failed to load projects');
@@ -158,12 +245,12 @@ export function AddProjectTaskDialog({ onTaskAdd }: AddProjectTaskDialogProps) {
     };
 
     loadProjects();
-  }, [open, form, toast]);
+  }, [isOpen, toast, form, isEditMode, initialTask]);
+
 
   // Fetch dependent data (assignees, sprints, milestones) when project changes
   useEffect(() => {
-
-    if (!selectedProject || !open) return;
+    if (!selectedProject || !isOpen) return;
 
     let isCurrent = true;
 
@@ -186,32 +273,47 @@ export function AddProjectTaskDialog({ onTaskAdd }: AddProjectTaskDialogProps) {
           value: String(member.id),
           label: member.user_name,
         }));
-
         setAssignees(transformedAssignees);
+
         const filteredSprints = sprintData.filter(
           (s: any) => s.project === selectedProject
         );
-
         setSprints(filteredSprints);
 
         const filteredMilestones = milestoneData.filter(
           (m: any) => m.project === selectedProject
         );
-
         setMilestones(filteredMilestones);
 
-        if (transformedAssignees.length > 0) {
-          form.setValue('assignee', String(transformedAssignees[0].value));
-        }
+        // Pre-populate assignees, sprints, milestones if in edit mode
+        if (isEditMode && initialTask) {
+            const initialAssignee = transformedAssignees.find(a => a.label === initialTask.assignee.name);
+            if (initialAssignee) form.setValue('assignee', String(initialAssignee.id));
 
-        if (sprintData.length > 0) {
-          form.setValue('sprint', String(sprintData[0].id));
-        }
+            const initialSprint = filteredSprints.find(s => s.id === initialTask.sprint); // Assuming initialTask.sprint is the ID
+            if (initialSprint) form.setValue('sprint', initialSprint.id);
 
-        if (milestoneData.length > 0) {
-          form.setValue('milestone', String(milestoneData[0].id));
-        }
+            const initialMilestone = filteredMilestones.find(m => m.id === initialTask.milestone); // Assuming initialTask.milestone is the ID
+            if (initialMilestone) form.setValue('milestone', initialMilestone.id);
 
+        } else {
+            // For add mode, or if initialTask values not found, default to first or clear
+            if (transformedAssignees.length > 0) {
+                form.setValue('assignee', String(transformedAssignees[0].id));
+            } else {
+                form.setValue('assignee', '');
+            }
+            if (sprintData.length > 0) {
+                form.setValue('sprint', String(sprintData[0].id));
+            } else {
+                form.setValue('sprint', '');
+            }
+            if (milestoneData.length > 0) {
+                form.setValue('milestone', String(milestoneData[0].id));
+            } else {
+                form.setValue('milestone', '');
+            }
+        }
       } catch (err) {
         console.log("Dependent fetch error:", err);
       } finally {
@@ -229,41 +331,49 @@ export function AddProjectTaskDialog({ onTaskAdd }: AddProjectTaskDialogProps) {
       isCurrent = false;
     };
 
-  }, [selectedProject]); // ⭐ ONLY THIS
+  }, [selectedProject, isOpen, isEditMode, initialTask]);
 
 
-  const onSubmit = async (data: AddTaskFormValues) => {
+  const onSubmit = async (data: TaskFormValues) => {
     setIsSubmitting(true);
     try {
-      const assignedToMember = assignees.find((m) => m.id === data.assignee);
+      const assignedToMember = assignees.find((m) => String(m.id) === data.assignee);
       const assignedToUserId = assignedToMember?.user;
 
-      const payload = {
+      const payload: Partial<Task> = {
         title: data.title,
         description: data.description || '',
         priority: data.priority,
-        status: statusMap[data.status],
+        status: statusMap[data.status], // Map to API status
         due_date: format(data.dueDate, 'yyyy-MM-dd'),
         project: data.project,
-        assigned_to: assignedToUserId ?? null,
+        assigned_to: assignedToUserId ?? null, // Backend expects user ID
         sprint: data.sprint || null,
         milestone: data.milestone || null,
       };
 
+      if (isEditMode && initialTask) {
+        // Edit existing task
+        await internalUpdateTask(initialTask.id, payload);
+        toast({
+          title: 'Task Updated',
+          description: `Task "${data.title}" updated successfully.`,
+        });
+      } else {
+        // Create new task
+        await internalCreateTask(payload);
+        toast({
+          title: 'Task Created',
+          description: `Task "${data.title}" added successfully.`,
+        });
+      }
 
-      await createTask(payload);
-
-      toast({
-        title: 'Task Created',
-        description: `Task "${data.title}" added successfully.`,
-      });
-
-      onTaskAdd(data);
-      setOpen(false);
+      onTaskSubmitted(); // Notify parent component (TaskView) to re-fetch tasks
+      onOpenChange(false);
     } catch (err: any) {
       toast({
         title: 'Error',
-        description: err.message || 'Failed to create task',
+        description: err.message || `Failed to ${isEditMode ? 'update' : 'create'} task`,
         variant: 'destructive',
       });
     } finally {
@@ -272,22 +382,15 @@ export function AddProjectTaskDialog({ onTaskAdd }: AddProjectTaskDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" className="gap-2">
-          <Plus className="w-4 h-4" />
-          Add Task
-        </Button>
-      </DialogTrigger>
-
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px] w-[calc(100%-1rem)] max-h-[90vh] overflow-y-auto hide-scrollbar">
         <DialogHeader>
-          <DialogTitle>Add New Task</DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit Task' : 'Add New Task'}</DialogTitle>
           <DialogDescription>
-            Fill in the details to create a new task.
+            {isEditMode ? 'Update the details for this task.' : 'Fill in the details to create a new task.'}
           </DialogDescription>
         </DialogHeader>
-
+        
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* Project */}
@@ -300,17 +403,14 @@ export function AddProjectTaskDialog({ onTaskAdd }: AddProjectTaskDialogProps) {
                   <Select
                     onValueChange={(val) => {
                       field.onChange(val);
-
-                      // CLEAR OLD DATA 
+                      // CLEAR OLD DATA (assignees, sprints, milestones) when project changes
                       setAssignees([]);
                       setSprints([]);
                       setMilestones([]);
-
                       form.setValue('assignee', '');
                       form.setValue('sprint', '');
                       form.setValue('milestone', '');
                     }}
-
                     value={field.value}
                     disabled={loadingProjects || isSubmitting}
                   >
@@ -405,8 +505,6 @@ export function AddProjectTaskDialog({ onTaskAdd }: AddProjectTaskDialogProps) {
                       onValueChange={field.onChange}
                       value={field.value}
                       disabled={loadingAssignees || !selectedProject || isSubmitting}
-
-
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -532,7 +630,6 @@ export function AddProjectTaskDialog({ onTaskAdd }: AddProjectTaskDialogProps) {
                         <SelectItem value="low">Low</SelectItem>
                         <SelectItem value="medium">Medium</SelectItem>
                         <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="critical">Critical</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -597,14 +694,14 @@ export function AddProjectTaskDialog({ onTaskAdd }: AddProjectTaskDialogProps) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setOpen(false)}
+                onClick={() => onOpenChange(false)}
                 disabled={isSubmitting}
               >
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create Task
+                {isEditMode ? 'Save Changes' : 'Create Task'}
               </Button>
             </div>
           </form>

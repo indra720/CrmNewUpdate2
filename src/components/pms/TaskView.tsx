@@ -1,7 +1,6 @@
 'use client';
-import React, { useMemo, useState } from 'react';
-import { LayoutGrid, List } from 'lucide-react';
-import { mockTasks, Task } from '@/lib/mock-tasks';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { LayoutGrid, List, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -10,22 +9,122 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { AddProjectTaskDialog } from '../forms/AddProjectTaskDialog';
+import { TaskFormDialog } from '@/components/forms/TaskFormDialog'; // Changed import
 import { cn } from '@/lib/utils';
 import TaskListView from './TaskListView';
 import TaskBoardView from './TaskBoardView';
 import { useSearch } from '@/context/SearchContext';
+import { Task, TaskViewTask, mapApiTaskToTaskView } from '@/types';
+import TaskDetailsDialog from './TaskDetailsDialog'; // Added
+import DeleteConfirmationDialog from './DeleteConfirmationDialog'; // Added
+import { useToast } from '@/hooks/use-toast'; // Added import for useToast
+
+async function internalDeleteTask(taskId: string): Promise<void> {
+  const token = localStorage.getItem("authToken");
+  if (!token) throw new Error("Authentication token not found.");
+  console.log(`internalDeleteTask: Using token: ${token ? 'present' : 'missing'}`);
+  try {
+    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/tasks/${taskId}/`;
+    console.log(`internalDeleteTask: Attempting DELETE request to ${url}`);
+    const response = await fetch(
+      url,
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${token}`,
+        },
+      },
+    );
+    if (!response.ok) {
+      // Try to parse error body if available
+      let errorBody = 'No error body provided';
+      try {
+        errorBody = await response.text(); // Use text to avoid JSON parsing issues
+        console.error(`internalDeleteTask: Raw API error body for task ${taskId}:`, errorBody);
+        const errorJson = JSON.parse(errorBody); // Try parsing as JSON for structured errors
+        errorBody = errorJson.message || errorJson.detail || errorBody;
+      } catch (parseError) {
+        console.warn(`internalDeleteTask: Could not parse error body as JSON for task ${taskId}. Raw text:`, errorBody);
+      }
+      throw new Error(errorBody || `HTTP error! status: ${response.status}`);
+    }
+    console.log(`internalDeleteTask: Task ${taskId} deleted successfully.`);
+    // No content expected for a successful DELETE
+  } catch (error: any) {
+    console.error(`internalDeleteTask: Failed to delete task ${taskId}:`, error);
+    throw new Error(`Failed to delete task: ${error.message || "Unknown error"}`);
+  }
+}
 
 type ViewMode = 'list' | 'board';
-const ALL_STATUSES: Task['status'][] = ['To Do', 'In Progress', 'Done'];
+const ALL_STATUSES: TaskViewTask['status'][] = ['To Do', 'In Progress', 'Done'];
 
 const TaskView = () => {
-  const [tasks, setTasks] = useState<Task[]>(mockTasks);
+  const [tasks, setTasks] = useState<TaskViewTask[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('board');
   
   const { searchQuery } = useSearch();
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const { toast } = useToast(); // Initialize useToast
+
+  // States for dialogs
+  const [selectedTask, setSelectedTask] = useState<TaskViewTask | null>(null);
+  const [isAddTaskDialogOpen, setIsAddTaskDialogOpen] = useState(false);
+  const [isEditTaskDialogOpen, setIsEditTaskDialogOpen] = useState(false);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+
+  const refetchTasks = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const token = localStorage.getItem("authToken");
+    console.log(`refetchTasks: Using token: ${token ? 'present' : 'missing'}`);
+
+    if (!token) {
+      setError("Authentication token not found.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/tasks/`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Token ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`,
+        );
+      }
+
+      const data = await response.json();
+      const apiTasks: Task[] = data.results || [];
+      const mappedTasks = apiTasks.map(mapApiTaskToTaskView);
+      setTasks(mappedTasks);
+    } catch (err: any) {
+      console.error("Failed to fetch project tasks:", err);
+      setError(`Failed to fetch project tasks: ${err.message || "Unknown error"}`);
+    } finally {
+      setLoading(false);
+    }
+  }, []); // Empty dependency array means this function is created once
+
+  useEffect(() => {
+    refetchTasks();
+  }, [refetchTasks]); // Now refetchTasks is a dependency
 
   const { filteredTasks, boardColumns } = useMemo(() => {
     const lowerCaseQuery = searchQuery.toLowerCase().trim();
@@ -38,41 +137,64 @@ const TaskView = () => {
       if (isStatusQuery) {
         return task.status.toLowerCase() === lowerCaseQuery && matchesPriority;
       }
-      
+
       const matchesSearch = task.title.toLowerCase().includes(lowerCaseQuery);
       return matchesSearch && matchesStatusFilter && matchesPriority;
     });
 
-    const columnsToShow = isStatusQuery 
+    const columnsToShow = isStatusQuery
       ? ALL_STATUSES.filter(s => s.toLowerCase() === lowerCaseQuery)
       : ALL_STATUSES;
 
     return { filteredTasks: tasksToShow, boardColumns: columnsToShow };
   }, [tasks, searchQuery, statusFilter, priorityFilter]);
 
-  const onTaskAdd = (newTaskData: {
-    title: string;
-    description?: string;
-    assignee: string;
-    status: 'To Do' | 'In Progress' | 'Done';
-    priority: 'low' | 'medium' | 'high';
-    dueDate: Date;
-    tags?: string;
-  }) => {
-    const newTags = newTaskData.tags ? newTaskData.tags.split(',').map(tag => tag.trim()) : [];
-    const fullTask: Task = {
-      id: `TASK-${Math.floor(Math.random() * 1000)}`,
-      title: newTaskData.title,
-      description: newTaskData.description,
-      status: newTaskData.status,
-      priority: newTaskData.priority,
-      assignee: { name: newTaskData.assignee }, 
-      dueDate: newTaskData.dueDate,
-      tags: newTags,
-    };
-    setTasks(prev => [fullTask, ...prev]);
+  // Handler for when TaskFormDialog submits (add or edit)
+  const handleTaskFormSubmitted = () => {
+    refetchTasks(); // Re-fetch tasks to update the list
+    setIsAddTaskDialogOpen(false);
+    setIsEditTaskDialogOpen(false);
+    setSelectedTask(null);
   };
 
+  // Handlers for opening dialogs
+  const openEditTaskDialog = (task: TaskViewTask) => {
+    setSelectedTask(task);
+    setIsEditTaskDialogOpen(true);
+  };
+
+  const openViewTaskDialog = (task: TaskViewTask) => {
+    setSelectedTask(task);
+    setIsDetailsDialogOpen(true);
+  };
+
+  const openDeleteTaskDialog = (task: TaskViewTask) => {
+    console.log(`openDeleteTaskDialog: Task selected for deletion: ${task.id}`);
+    setSelectedTask(task);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    console.log('--- handleDeleteConfirm: START ---');
+    console.log('handleDeleteConfirm called.');
+    if (!selectedTask) {
+      console.log('handleDeleteConfirm: selectedTask is null, returning.');
+      return;
+    }
+    console.log('handleDeleteConfirm: selectedTask object:', selectedTask);
+    console.log(`handleDeleteConfirm: Attempting to delete task with ID: ${selectedTask.id}`);
+    try {
+      await internalDeleteTask(selectedTask.id);
+      refetchTasks(); // Re-fetch tasks after successful deletion
+      toast({ title: 'Success', description: `Task "${selectedTask.title}" deleted successfully.` });
+    } catch (err: any) {
+      console.error("Error deleting task:", err);
+      toast({ title: 'Error', description: err.message || 'Failed to delete task', variant: 'destructive' });
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setSelectedTask(null);
+    }
+  };
   return (
     <div className="p-4 sm:p-6 space-y-6 bg-card rounded-lg shadow-sm">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -81,7 +203,11 @@ const TaskView = () => {
           <p className="text-muted-foreground">Manage all project tasks here.</p>
         </div>
         <div className="flex items-center gap-2">
-          <AddProjectTaskDialog onTaskAdd={onTaskAdd} />
+          {/* Button to open Add Task Dialog */}
+          <Button size="sm" className="gap-2" onClick={() => setIsAddTaskDialogOpen(true)}>
+            <Plus className="w-4 h-4" />
+            Add Task
+          </Button>
         </div>
       </div>
 
@@ -131,14 +257,32 @@ const TaskView = () => {
       </div>
 
       <div>
-        {viewMode === 'list' ? (
-          <TaskListView tasks={filteredTasks} />
-        ) : (
-          <TaskBoardView tasks={filteredTasks} setTasks={setTasks} columns={boardColumns} />
+        {loading && <p>Loading tasks...</p>}
+        {error && <p className="text-red-500">Error: {error}</p>}
+        {!loading && !error && (
+          viewMode === 'list' ? (
+            <TaskListView
+              tasks={filteredTasks}
+              onEditTask={openEditTaskDialog}
+              onViewTask={openViewTaskDialog}
+              onDeleteTask={openDeleteTaskDialog}
+            />
+          ) : (
+            <TaskBoardView
+              tasks={filteredTasks}
+              setTasks={setTasks} // This setTasks is only for DND, actual updates trigger refetch
+              columns={boardColumns}
+              onTaskUpdatedOrAdded={handleTaskFormSubmitted} // For updates from dialog
+            />
+          )
         )}
       </div>
+
+     
     </div>
   );
 };
+
+
 
 export default TaskView;

@@ -3,7 +3,7 @@ import React from 'react';
 import { MoreHorizontal } from 'lucide-react';
 import { format } from 'date-fns';
 
-import { Task } from '@/lib/mock-tasks';
+import { TaskViewTask } from '@/types'; // Changed from Task
 import {
   Table,
   TableBody,
@@ -25,28 +25,33 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface TaskListViewProps {
-  tasks: Task[];
+  tasks: TaskViewTask[]; // Changed from Task
+  onEditTask: (task: TaskViewTask) => void; // Added
+  onViewTask: (task: TaskViewTask) => void; // Added
+  onDeleteTask: (task: TaskViewTask) => void; // Added
 }
 
-const statusVariant: { [key in Task['status']]: 'default' | 'secondary' | 'outline' } = {
+const statusVariant: { [key in TaskViewTask['status']]: 'default' | 'secondary' | 'outline' } = { // Changed from Task
   'To Do': 'secondary',
   'In Progress': 'default',
   'Done': 'outline',
 };
 
 
-const priorityVariant: { [key in Task['priority']]: 'destructive' | 'default' | 'secondary' } = {
+const priorityVariant: { [key in TaskViewTask['priority']]: 'destructive' | 'default' | 'secondary' } = { // Changed from Task
   'high': 'destructive',
   'medium': 'default',
   'low': 'secondary',
 };
 
-const TaskListView: React.FC<TaskListViewProps> = ({ tasks }) => {
-  const handleActionClick = (action: string, task: Task) => {
-    // In a real app, you'd trigger a dialog, drawer, or API call here
-    console.log(`${action} clicked for task:`, task.id);
+const TaskListView: React.FC<TaskListViewProps> = ({ tasks, onEditTask, onViewTask, onDeleteTask }) => { // Updated props
+  const handleActionClick = (action: string, task: TaskViewTask) => { // Updated task type
     if (action === 'View Details') {
-      alert(`Viewing details for ${task.title}`);
+      onViewTask(task);
+    } else if (action === 'Edit Task') {
+      onEditTask(task);
+    } else if (action === 'Delete Task') {
+      onDeleteTask(task);
     }
   };
 

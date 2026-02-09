@@ -149,3 +149,68 @@ export type Task = {
   milestone: string | null; // Milestone UUID
   tags?: string[]; // Keep as optional, might be derived or added later
 };
+
+// Type for the TaskView component, adapted from the API's Task type
+export type TaskViewTask = {
+  id: string;
+  title: string;
+  description?: string;
+  status: 'To Do' | 'In Progress' | 'Done'; // Mapped from API's 'todo', 'in_progress', 'done'
+  priority: 'low' | 'medium' | 'high'; // Mapped from API's 'low', 'medium', 'high', 'critical'
+  assignee: { name: string }; // Mapped from API's 'assigned_to_name'
+  dueDate: Date; // Mapped from API's 'due_date' string
+  tags?: string[];
+  project_name?: string; // Added from API's Task
+  project: string; // Added from API's Task
+  sprint?: string | null; // Added from API's Task
+  milestone?: string | null; // Added from API's Task
+};
+
+// Function to map API Task to TaskViewTask
+export const mapApiTaskToTaskView = (apiTask: Task): TaskViewTask => {
+  let status: 'To Do' | 'In Progress' | 'Done';
+  switch (apiTask.status) {
+    case 'todo':
+      status = 'To Do';
+      break;
+    case 'in_progress':
+      status = 'In Progress';
+      break;
+    case 'done':
+      status = 'Done';
+      break;
+    default:
+      status = 'To Do'; // Default status
+  }
+
+  let priority: 'low' | 'medium' | 'high';
+  switch (apiTask.priority) {
+    case 'low':
+    case 'medium':
+    case 'high':
+      priority = apiTask.priority;
+      break;
+    case 'critical':
+      priority = 'high'; // Map 'critical' to 'high' for TaskView
+      break;
+    default:
+      priority = 'medium'; // Default priority
+  }
+
+  const dueDate = apiTask.due_date ? new Date(apiTask.due_date) : new Date(); // Convert string to Date, provide default
+
+  return {
+    id: apiTask.id,
+    title: apiTask.title,
+    description: apiTask.description || '',
+    status: status,
+    priority: priority,
+    assignee: { name: apiTask.assigned_to_name || 'Unassigned' },
+    dueDate: dueDate,
+    tags: apiTask.tags || [], // Assuming tags might be an empty array if not present
+    project_name: apiTask.project_name || '',
+    project: apiTask.project,
+    sprint: apiTask.sprint,
+    milestone: apiTask.milestone,
+  };
+};
