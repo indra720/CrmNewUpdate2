@@ -135,7 +135,7 @@ export type Task = {
   completed_at: string | null;
   assigned_at: string | null;
   priority: 'low' | 'medium' | 'high' | 'critical';
-  status: 'todo' | 'in_progress' | 'done';
+  status: 'todo' | 'in_progress' | 'review' | 'done' | 'blocked';
   due_date: string | null;
   is_active: boolean;
   created_at: string;
@@ -155,20 +155,33 @@ export type TaskViewTask = {
   id: string;
   title: string;
   description?: string;
-  status: 'To Do' | 'In Progress' | 'Done'; // Mapped from API's 'todo', 'in_progress', 'done'
+  status: 'To Do' | 'In Progress' | 'Review' | 'Done' | 'Blocked'; // Mapped from API's 'todo', 'in_progress', 'done'
   priority: 'low' | 'medium' | 'high'; // Mapped from API's 'low', 'medium', 'high', 'critical'
-  assignee: { name: string }; // Mapped from API's 'assigned_to_name'
+  assignee: {
+    avatar: string; name: string 
+}; // Mapped from API's 'assigned_to_name'
   dueDate: Date; // Mapped from API's 'due_date' string
   tags?: string[];
   project_name?: string; // Added from API's Task
-  project: string; // Added from API's Task
-  sprint?: string | null; // Added from API's Task
-  milestone?: string | null; // Added from API's Task
-};
-
+      project: string; // Added from API's Task
+      sprint?: string | null; // Added from API's Task
+      milestone?: string | null; // Added from API's Task
+    };
+    
+    export interface Comment {
+      id: string; // The UUID from the API response
+      comment: string; // The comment text
+      task: string; // UUID of the associated task
+      created_at: string; // Timestamp of creation (e.g., "2026-02-09T15:47:09.540731+05:30")
+      commented_by: number; // The ID of the user who commented
+      commented_by_name: string; // The name of the user who commented
+      is_deleted: boolean;
+      deleted_at: string | null;
+      deleted_by: number | null;
+    }
 // Function to map API Task to TaskViewTask
 export const mapApiTaskToTaskView = (apiTask: Task): TaskViewTask => {
-  let status: 'To Do' | 'In Progress' | 'Done';
+  let status: 'To Do' | 'In Progress' | 'Review' | 'Done' | 'Blocked';
   switch (apiTask.status) {
     case 'todo':
       status = 'To Do';
@@ -176,11 +189,17 @@ export const mapApiTaskToTaskView = (apiTask: Task): TaskViewTask => {
     case 'in_progress':
       status = 'In Progress';
       break;
+    case 'review':
+      status = 'Review';
+      break;
     case 'done':
       status = 'Done';
       break;
+    case 'blocked':
+      status = 'Blocked';
+      break;
     default:
-      status = 'To Do'; // Default status
+      status = 'To Do'; // Default status if API returns an unrecognized status
   }
 
   let priority: 'low' | 'medium' | 'high';

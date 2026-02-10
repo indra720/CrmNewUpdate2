@@ -16,68 +16,109 @@ import TaskBoardView from './TaskBoardView';
 import { useSearch } from '@/context/SearchContext';
 import { Task, TaskViewTask, mapApiTaskToTaskView } from '@/types';
 import TaskDetailsDialog from './TaskDetailsDialog'; // Added
-import DeleteConfirmationDialog from './DeleteConfirmationDialog'; // Added
+// import DeleteConfirmationDialog from './DeleteConfirmationDialog'; // Added -- REMOVED
 import { useToast } from '@/hooks/use-toast'; // Added import for useToast
 
 async function internalDeleteTask(taskId: string): Promise<void> {
   const token = localStorage.getItem("authToken");
-  if (!token) throw new Error("Authentication token not found.");
-  console.log(`internalDeleteTask: Using token: ${token ? 'present' : 'missing'}`);
-  try {
-    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/tasks/${taskId}/`;
-    console.log(`internalDeleteTask: Attempting DELETE request to ${url}`);
-    const response = await fetch(
-      url,
-      {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Token ${token}`,
-        },
-      },
-    );
-    if (!response.ok) {
-      // Try to parse error body if available
-      let errorBody = 'No error body provided';
-      try {
-        errorBody = await response.text(); // Use text to avoid JSON parsing issues
-        console.error(`internalDeleteTask: Raw API error body for task ${taskId}:`, errorBody);
-        const errorJson = JSON.parse(errorBody); // Try parsing as JSON for structured errors
-        errorBody = errorJson.message || errorJson.detail || errorBody;
-      } catch (parseError) {
-        console.warn(`internalDeleteTask: Could not parse error body as JSON for task ${taskId}. Raw text:`, errorBody);
-      }
-      throw new Error(errorBody || `HTTP error! status: ${response.status}`);
+  if (!token) {
+    // console.error("internalDeleteTask: Authentication token not found in localStorage.");
+    throw new Error("Authentication token not found. Please log in again.");
+  }
+  // console.log("internalDeleteTask: Auth token found.");
+
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (!apiBaseUrl) {
+    console.error("internalDeleteTask: NEXT_PUBLIC_API_BASE_URL is not defined.");
+    throw new Error("API Base URL is not defined. Please check environment variables.");
+  }
+  // console.log(`internalDeleteTask: API Base URL: ${apiBaseUrl}`);
+
+  // Extract numeric ID if it's in format "PREFIX-NUMBER" (e.g., "TASK-123" -> "123")
+  let cleanId = taskId;
+  if (taskId && taskId.includes('-')) {
+    const parts = taskId.split('-');
+    const lastPart = parts[parts.length - 1];
+    if (!isNaN(Number(lastPart))) {
+      cleanId = lastPart;
     }
-    console.log(`internalDeleteTask: Task ${taskId} deleted successfully.`);
-    // No content expected for a successful DELETE
+  }
+
+  const url = `${apiBaseUrl}/api/projects/tasks/${cleanId}/`;
+  // console.log(`internalDeleteTask: Attempting DELETE request to URL: ${url} for task ID: ${taskId} (Clean ID: ${cleanId})`);
+
+  try {
+    const response = await fetch(url, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      let errorDetail = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorDetail = errorData.detail || errorData.message || JSON.stringify(errorData);
+      } catch (e) {
+        // If parsing JSON fails, try to get plain text
+        errorDetail = await response.text();
+      }
+      const errorMessage = `Failed to delete task ${taskId}: ${errorDetail}`;
+      // console.error(`internalDeleteTask: API response error - ${errorMessage}`);
+      throw new Error(errorMessage);
+    }
+
+    // console.log(`internalDeleteTask: Task ${taskId} deleted successfully. Response status: ${response.status}`);
   } catch (error: any) {
-    console.error(`internalDeleteTask: Failed to delete task ${taskId}:`, error);
-    throw new Error(`Failed to delete task: ${error.message || "Unknown error"}`);
+    const errorMessage = `Network or unexpected error deleting task ${taskId}: ${error.message || "Unknown error"}`;
+    // console.error(`internalDeleteTask: Catch block error - ${errorMessage}`);
+    throw new Error(errorMessage);
   }
 }
 
 type ViewMode = 'list' | 'board';
-const ALL_STATUSES: TaskViewTask['status'][] = ['To Do', 'In Progress', 'Done'];
+const ALL_STATUSES: TaskViewTask['status'][] = ['To Do', 'In Progress', 'Review', 'Done', 'Blocked'];
 
 const TaskView = () => {
   const [tasks, setTasks] = useState<TaskViewTask[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('board');
-  
+
   const { searchQuery } = useSearch();
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const { toast } = useToast(); // Initialize useToast
 
   // States for dialogs
-  const [selectedTask, setSelectedTask] = useState<TaskViewTask | null>(null);
+  const [selectedTask, setSelectedTask] = useState<TaskViewTask | null>(null); // Re-added selectedTask state
   const [isAddTaskDialogOpen, setIsAddTaskDialogOpen] = useState(false);
   const [isEditTaskDialogOpen, setIsEditTaskDialogOpen] = useState(false);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
+  const handleDeleteTask = async (taskToDelete: TaskViewTask) => {
+    console.log('handleDeleteTask: Starting direct deletion process.');
+    if (!taskToDelete) {
+      // console.warn('handleDeleteTask: taskToDelete is null, cannot proceed with deletion.');
+      toast({ title: 'Error', description: 'No task selected for deletion.', variant: 'destructive' });
+      return;
+    }
+    console.log(`handleDeleteTask: Attempting to delete task with ID: ${taskToDelete.id}, Title: ${taskToDelete.title}`);
+    try {
+      await internalDeleteTask(taskToDelete.id);
+      // console.log('handleDeleteTask: Task deleted successfully, refetching tasks.');
+      refetchTasks(); // Re-fetch tasks after successful deletion
+      toast({ title: 'Success', description: `Task "${taskToDelete.title}" deleted successfully.` });
+    } catch (err: any) {
+      // /console.error("handleDeleteTask: Error deleting task:", err);
+      toast({ title: 'Error', description: err.message || 'Failed to delete task', variant: 'destructive' });
+    } finally {
+      // console.log('handleDeleteTask: Deletion process finished.');
+      setSelectedTask(null); // Clear selected task
+    }
+  };
 
   const refetchTasks = useCallback(async () => {
     setLoading(true);
@@ -90,6 +131,7 @@ const TaskView = () => {
       setLoading(false);
       return;
     }
+
 
     try {
       const response = await fetch(
@@ -168,33 +210,7 @@ const TaskView = () => {
     setIsDetailsDialogOpen(true);
   };
 
-  const openDeleteTaskDialog = (task: TaskViewTask) => {
-    console.log(`openDeleteTaskDialog: Task selected for deletion: ${task.id}`);
-    setSelectedTask(task);
-    setIsDeleteDialogOpen(true);
-  };
 
-  const handleDeleteConfirm = async () => {
-    console.log('--- handleDeleteConfirm: START ---');
-    console.log('handleDeleteConfirm called.');
-    if (!selectedTask) {
-      console.log('handleDeleteConfirm: selectedTask is null, returning.');
-      return;
-    }
-    console.log('handleDeleteConfirm: selectedTask object:', selectedTask);
-    console.log(`handleDeleteConfirm: Attempting to delete task with ID: ${selectedTask.id}`);
-    try {
-      await internalDeleteTask(selectedTask.id);
-      refetchTasks(); // Re-fetch tasks after successful deletion
-      toast({ title: 'Success', description: `Task "${selectedTask.title}" deleted successfully.` });
-    } catch (err: any) {
-      console.error("Error deleting task:", err);
-      toast({ title: 'Error', description: err.message || 'Failed to delete task', variant: 'destructive' });
-    } finally {
-      setIsDeleteDialogOpen(false);
-      setSelectedTask(null);
-    }
-  };
   return (
     <div className="p-4 sm:p-6 space-y-6 bg-card rounded-lg shadow-sm">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -221,7 +237,9 @@ const TaskView = () => {
               <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="To Do">To Do</SelectItem>
               <SelectItem value="In Progress">In Progress</SelectItem>
+              <SelectItem value="Review">Review</SelectItem>
               <SelectItem value="Done">Done</SelectItem>
+              <SelectItem value="Blocked">Blocked</SelectItem>
             </SelectContent>
           </Select>
           <Select value={priorityFilter} onValueChange={setPriorityFilter}>
@@ -265,7 +283,7 @@ const TaskView = () => {
               tasks={filteredTasks}
               onEditTask={openEditTaskDialog}
               onViewTask={openViewTaskDialog}
-              onDeleteTask={openDeleteTaskDialog}
+              onDeleteTask={handleDeleteTask} // Direct call
             />
           ) : (
             <TaskBoardView
@@ -273,12 +291,34 @@ const TaskView = () => {
               setTasks={setTasks} // This setTasks is only for DND, actual updates trigger refetch
               columns={boardColumns}
               onTaskUpdatedOrAdded={handleTaskFormSubmitted} // For updates from dialog
+              onDeleteTask={handleDeleteTask}
             />
           )
         )}
       </div>
-
-     
+      <TaskDetailsDialog
+        isOpen={isDetailsDialogOpen}
+        onClose={() => setIsDetailsDialogOpen(false)}
+        task={selectedTask}
+        onEdit={() => {
+          if (selectedTask) {
+            openEditTaskDialog(selectedTask);
+            setIsDetailsDialogOpen(false); // Close details dialog when opening edit
+          }
+        }}
+      />
+      <TaskFormDialog
+        isOpen={isAddTaskDialogOpen || isEditTaskDialogOpen}
+        onOpenChange={(open) => { // Changed prop name to onOpenChange
+          if (!open) { // Only close if 'open' is false (dialog is closing)
+            setIsAddTaskDialogOpen(false);
+            setIsEditTaskDialogOpen(false);
+            setSelectedTask(null);
+          }
+        }}
+        onTaskSubmitted={handleTaskFormSubmitted}
+        initialTask={selectedTask}
+      />
     </div>
   );
 };

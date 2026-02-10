@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { ArrowLeft, DollarSign, Calendar, Users, Briefcase, MoreHorizontal, CheckSquare, ListTodo, Activity, GanttChart, SquareStack, CheckCircle, MessageSquare, PlusCircle, Pencil, Trash2, Archive } from 'lucide-react'; // Added activity-related icons
 import { Button } from '@/components/ui/button';
 import { AddProjectMemberDialog } from '../forms/AddProjectMemberDialog';
-import { AddProjectTaskDialog } from '../forms/AddProjectTaskDialog';
+
 import { TaskRow } from './TaskRow'; // Import TaskRow
 import { EditProjectDialog } from '../forms/EditProject';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -391,12 +391,12 @@ export default function ProjectDetails({ params }: ProjectDetailsPageProps) {
           </Card>
 
           {/* Tasks Section */}
-          <div className="space-y-4">
+          {/* <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 <ListTodo className="h-5 w-5 text-[#fa7516]" /> Tasks
               </h2>
-              <AddProjectTaskDialog onTaskAdd={onTaskAdd} />
+             
             </div>
 
             <div className="bg-card rounded-xl border border-border">
@@ -415,7 +415,7 @@ export default function ProjectDetails({ params }: ProjectDetailsPageProps) {
                 </div>
               )}
             </div>
-          </div>
+          </div> */}
         </div>
 
         {/* Right Sidebar */}

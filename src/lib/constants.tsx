@@ -341,6 +341,24 @@ export const TEAM_LEADER_DASHBOARD_KPI_DATA = [
     { title: "Not Picked", valueKey: "not_picked", icon: Phone, color: "text-slate-500", link: "/team-leader/reports/not-picked" },
 ];
 
+// Define the allowed task status transitions as per backend logic
+export const TASK_STATUS_FLOW: { [key: string]: string[] } = {
+    "todo": ["in_progress"],
+    "in_progress": ["review", "blocked"],
+    "review": ["done", "in_progress"],
+    "blocked": ["in_progress"],
+    "done": [],
+};
+
+// Map frontend display status to backend lowercase status
+export const UI_TO_BACKEND_STATUS_MAP: { [key: string]: string } = {
+  "To Do": "todo",
+  "In Progress": "in_progress",
+  "Review": "review",
+  "Done": "done",
+  "Blocked": "blocked",
+};
+
 
 
 

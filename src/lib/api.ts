@@ -1,4 +1,14 @@
 import { ReactNode } from "react";
+import { TaskViewTask } from '@/types'; // Import TaskViewTask
+
+// Define a mapping for frontend display names to backend API names
+const taskStatusFrontendToBackendMap: { [key: string]: string } = {
+  "To Do": "to_do",
+  "In Progress": "in_progress",
+  "Review": "review", // Added
+  "Done": "done",
+  "Blocked": "blocked", // Added
+};
 
 export async function toggleUserActiveStatus(
   userId: number,
@@ -2195,6 +2205,283 @@ export async function createMilestone(milestoneData: MilestonePayload): Promise<
     console.error("Failed to create milestone:", error);
     throw new Error(
       `Failed to create milestone: ${error.message || "Unknown error"}`,
+    );
+  }
+}
+
+export async function moveTaskApi(taskId: string, newStatus: TaskViewTask['status']): Promise<void> {
+  const token = localStorage.getItem("authToken");
+  if (!token) {
+    console.error("Authentication token not found.");
+    throw new Error("Authentication token not found. Please log in again.");
+  }
+
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (!apiBaseUrl) {
+    console.error("NEXT_PUBLIC_API_BASE_URL is not defined.");
+    throw new Error("API Base URL is not defined. Please check environment variables.");
+  }
+
+  let cleanId = taskId;
+  if (taskId && taskId.includes('-')) {
+    const parts = taskId.split('-');
+    const lastPart = parts[parts.length - 1];
+    if (!isNaN(Number(lastPart))) {
+      cleanId = lastPart;
+    }
+  }
+
+  // Translate the frontend status to the backend's expected format
+  const backendStatus = taskStatusFrontendToBackendMap[newStatus];
+  if (!backendStatus) {
+    console.error(`Invalid frontend status provided: ${newStatus}. No mapping found.`);
+    throw new Error(`Invalid task status: ${newStatus}.`);
+  }
+
+  const url = `${apiBaseUrl}/api/projects/tasks/${cleanId}/move/`;
+  console.log(`Attempting PATCH request to URL: ${url} for task ID: ${taskId} (Clean ID: ${cleanId}) with new status: ${backendStatus}`);
+
+  try {
+    const response = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${token}`,
+      },
+      body: JSON.stringify({ status: backendStatus }), // Send the translated status
+    });
+
+                if (!response.ok) {
+                  let errorDetail = `HTTP error! status: ${response.status}`;
+                  try {
+                    const errorData = await response.json();
+                    errorDetail = errorData.detail || errorData.message || JSON.stringify(errorData);
+                  } catch (e) {
+                    errorDetail = await response.text();
+                  }
+                  const errorMessage = `Failed to move task ${taskId}: ${errorDetail}`;
+                  console.error(errorMessage);
+                  throw new Error(errorMessage);
+                }    console.log(`Task ${taskId} moved successfully to ${backendStatus}. Response status: ${response.status}`);
+  } catch (error: any) {
+    const errorMessage = `Network or unexpected error moving task ${taskId}: ${error.message || "Unknown error"}`;
+    console.error(errorMessage);
+    throw new Error(errorMessage);
+  }
+}
+
+// Function to post a new comment for a task
+export async function createTaskComment(taskId: string, commentText: string): Promise<Comment> {
+  const token = localStorage.getItem("authToken");
+  if (!token) {
+    throw new Error("Authentication token not found. Please log in again.");
+  }
+
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (!apiBaseUrl) {
+    throw new Error("API Base URL is not defined. Please check environment variables.");
+  }
+
+  const url = `${apiBaseUrl}/api/projects/task-comments/`; // Provided by user
+
+  const requestBody = {
+    comment: commentText,
+    task: taskId,
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${token}`,
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      let errorDetail = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorDetail = errorData.detail || errorData.message || JSON.stringify(errorData);
+      } catch (e) {
+        errorDetail = await response.text();
+      }
+      const errorMessage = `Failed to add comment to task ${taskId}: ${errorDetail}`;
+      console.error(errorMessage);
+      throw new Error(errorMessage);
+    }
+
+    const newComment: Comment = await response.json();
+    console.log(`Comment added successfully for task ${taskId}. Response:`, newComment);
+    return newComment;
+  } catch (error: any) {
+    const errorMessage = `Network or unexpected error adding comment to task ${taskId}: ${error.message || "Unknown error"}`;
+    console.error(errorMessage);
+    throw new Error(errorMessage);
+  }
+}
+
+// Function to fetch comments for a specific task
+export async function getTaskComments(taskId: string): Promise<Comment[]> {
+  const token = localStorage.getItem("authToken");
+  if (!token) {
+    throw new Error("Authentication token not found. Please log in again.");
+  }
+
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (!apiBaseUrl) {
+    throw new Error("API Base URL is not defined. Please check environment variables.");
+  }
+
+  // Assuming the API supports filtering by task ID using a query parameter
+  const url = `${apiBaseUrl}/api/projects/task-comments/?task=${taskId}`;
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      let errorDetail = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorDetail = errorData.detail || errorData.message || JSON.stringify(errorData);
+      } catch (e) {
+        errorDetail = await response.text();
+      }
+      const errorMessage = `Failed to fetch comments for task ${taskId}: ${errorDetail}`;
+      console.error(errorMessage);
+      throw new Error(errorMessage);
+    }
+
+    const rawResponse = await response.json(); // Capture raw response
+    // Assuming the API returns a paginated response with a 'results' array
+    if (rawResponse && Array.isArray(rawResponse.results)) {
+      const comments: Comment[] = rawResponse.results;
+      console.log(`Comments fetched successfully for task ${taskId}. Response:`, comments);
+      return comments;
+    } else if (Array.isArray(rawResponse)) {
+      // Fallback if the API directly returns an array without pagination
+      const comments: Comment[] = rawResponse;
+      console.log(`Comments fetched successfully for task ${taskId}. Response:`, comments);
+      return comments;
+    } else {
+      console.warn(`getTaskComments: Unexpected API response structure for task ${taskId}:`, rawResponse);
+      return []; // Return empty array for unexpected structure
+    }
+  } catch (error: any) {
+    const errorMessage = `Network or unexpected error fetching comments for task ${taskId}: ${error.message || "Unknown error"}`;
+    console.error(errorMessage);
+    throw new Error(errorMessage);
+  }
+}
+
+// Function to update a specific comment for a task
+export async function updateTaskComment(commentId: string, taskId: string, commentText: string): Promise<Comment> {
+  const token = localStorage.getItem("authToken");
+  if (!token) {
+    throw new Error("Authentication token not found. Please log in again.");
+  }
+
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (!apiBaseUrl) {
+    throw new Error("API Base URL is not defined. Please check environment variables.");
+  }
+
+  // User provided endpoint: http://18.138.124.3/api/projects/task-comments/{id}
+  const url = `${apiBaseUrl}/api/projects/task-comments/${commentId}/`;
+
+  const requestBody = {
+    comment: commentText,
+    task: taskId, // User indicated 'task' is a required field for PUT
+  };
+
+      try {
+        const response = await fetch(url, {
+          method: "PUT", // User specified PUT
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Token ${token}`,
+          },
+          body: JSON.stringify(requestBody),
+        });
+  
+        // Read response body once
+        let responseBody = await response.text();
+        let parsedBody: any;
+        try {
+          parsedBody = JSON.parse(responseBody);
+        } catch (e) {
+          parsedBody = responseBody; // Not JSON, keep as text
+        }
+  
+        if (!response.ok) {
+          const errorDetail = parsedBody?.detail || parsedBody?.message || responseBody;
+          const errorMessage = `Failed to update comment ${commentId} for task ${taskId}: ${errorDetail}`;
+          console.error(errorMessage);
+          throw new Error(errorMessage);
+        }
+  
+        const updatedComment: Comment = parsedBody; // Use the already parsed body for success
+        console.log(`Comment ${commentId} updated successfully. Response:`, updatedComment);
+        return updatedComment;  } catch (error: any) {
+    const errorMessage = `Network or unexpected error updating comment ${commentId} for task ${taskId}: ${error.message || "Unknown error"}`;
+    console.error(errorMessage);
+    throw new Error(errorMessage);
+  }
+}
+
+
+// Function to delete a specific comment for a task
+export async function deleteTaskComment(commentId: string): Promise<void> {
+  const token = localStorage.getItem("authToken");
+  if (!token) {
+    throw new Error("Authentication token not found. Please log in again.");
+  }
+
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (!apiBaseUrl) {
+    throw new Error("API Base URL is not defined. Please check environment variables.");
+  }
+
+  const url = `${apiBaseUrl}/api/projects/task-comments/${commentId}/`;
+
+  try {
+    const response = await fetch(url, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Token ${token}`,
+      },
+    });
+
+    // DELETE usually returns 204 (No Content)
+    if (!response.ok) {
+      let errorMessage = `Failed to delete comment ${commentId}`;
+
+      try {
+        const errorData = await response.json();
+        errorMessage =
+          errorData?.detail ||
+          errorData?.message ||
+          JSON.stringify(errorData);
+      } catch {
+        errorMessage = await response.text();
+      }
+
+      throw new Error(errorMessage);
+    }
+
+    console.log(`Comment ${commentId} deleted successfully.`);
+  } catch (error: any) {
+    throw new Error(
+      `Network or unexpected error deleting comment ${commentId}: ${
+        error.message || "Unknown error"
+      }`
     );
   }
 }
