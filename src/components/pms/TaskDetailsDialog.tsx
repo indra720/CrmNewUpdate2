@@ -128,7 +128,7 @@ const TaskDetailsDialog: React.FC<TaskDetailsDialogProps> = ({
         </DialogHeader>
 
         {/* ---------- META INFO ---------- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
           <InfoCard
             icon={<Calendar className="h-4 w-4" />}
             label="Due Date"

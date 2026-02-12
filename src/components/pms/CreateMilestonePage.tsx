@@ -43,7 +43,8 @@ import {
 } from '@/components/ui/dialog';
 
 import { fetchProjectMembersForProjectCard, fetchProjects, fetchSprints, createMilestone } from '@/lib/api';
-import { Project, Sprint } from '@/types';
+import { Project } from '@/types';
+import { Sprint } from '@/components/pms/sprint-types';
 import { useToast } from '@/hooks/use-toast'; // Added useToast
 import { useRouter } from 'next/navigation';
 

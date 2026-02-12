@@ -1,6 +1,7 @@
 export type ProjectStatus = 'active' | 'planned' | 'completed' | 'on-hold';
 
 export interface ProjectMember {
+  name: any;
   label: ReactNode;
   value: Key;
   id: string; // ProjectMember ID (UUID)
@@ -40,45 +41,7 @@ export interface SprintTask {
   blocked?: boolean;
 }
 
-export interface Sprint {
-  id: string;
-  project: string; // Project UUID
-  project_name: string;
-  name: string;
-  sprint_number: string;
-  sprint_type: SprintType; // Use the new SprintType
-  goal: string;
-  start_date: string;
-  end_date: string;
-  duration_weeks: number;
-  working_days: number[]; // 1-5 for Mon-Fri from sprint-types.ts. API returns string[] for working_days. Need to clarify this.
-  story_points_target: number;
-  status: SprintStatus; // Use the new SprintStatus
-  // Properties from sprint-types.ts:
-  milestoneId?: string;
-  createdAt?: string;
-  scrumMaster: string;
-  productOwner: string;
-  teamMembers: string[];
-  capacity: Record<string, number>; // userId -> hours
-  settings: {
-    allowTaskOverflow: boolean;
-    autoClose: boolean;
-    allowScopeChange: boolean;
-    freezeWhenActive: boolean;
-  };
-  retrospective?: {
-    wentWell: string;
-    wentWrong: string;
-    actionItems: string[];
-  };
-  // Properties from previous Sprint in index.ts
-  total_capacity_hours: number;
-  created_by: number;
-  updated_at: string;
-  // Reconciled projectId and createdAt from previous index.ts with new structure
-  projectId: string; // For consistency with frontend state, already present
-}
+
 
 export interface Milestone {
   id: string;

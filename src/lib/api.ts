@@ -1,13 +1,13 @@
 import { ReactNode } from "react";
-import { TaskViewTask } from '@/types'; // Import TaskViewTask
+import { TaskViewTask } from "@/types"; // Import TaskViewTask
 
 // Define a mapping for frontend display names to backend API names
 const taskStatusFrontendToBackendMap: { [key: string]: string } = {
   "To Do": "to_do",
   "In Progress": "in_progress",
-  "Review": "review", // Added
-  "Done": "done",
-  "Blocked": "blocked", // Added
+  Review: "review", // Added
+  Done: "done",
+  Blocked: "blocked", // Added
 };
 
 export async function toggleUserActiveStatus(
@@ -1890,7 +1890,8 @@ export async function fetchCurrentUserProfile(): Promise<{
 }
 
 // new function to fetch projects
-import { Project, Sprint, Milestone, Task } from "@/types";
+import { Project, Milestone, Task } from "@/types";
+import { Sprint, SprintHistoryEntry } from "@/components/pms/sprint-types";
 
 // Map for converting numeric day representation (1=Mon, 7=Sun) to backend's expected string abbreviation
 const DAYS_OF_WEEK_MAP: { [key: number]: string } = {
@@ -1997,7 +1998,6 @@ export async function fetchProjectMembersForProjectCard(
   projectId: string,
 ): Promise<ProjectMember[]> {
   const token = localStorage.getItem("authToken");
-
   if (!token) {
     throw new Error("Authentication token not found.");
   }
@@ -2069,7 +2069,9 @@ export async function fetchSprints(projectId?: string): Promise<Sprint[]> {
   }
 }
 
-export async function fetchMilestones(projectId?: string): Promise<Milestone[]> {
+export async function fetchMilestones(
+  projectId?: string,
+): Promise<Milestone[]> {
   const token = localStorage.getItem("authToken");
 
   if (!token) {
@@ -2110,8 +2112,8 @@ export async function fetchMilestones(projectId?: string): Promise<Milestone[]> 
 interface TaskPayload {
   title: string;
   description?: string;
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  status: 'todo' | 'in_progress' | 'review' | 'done' | 'blocked';
+  priority: "low" | "medium" | "high" | "critical";
+  status: "todo" | "in_progress" | "review" | "done" | "blocked";
   due_date: string; // YYYY-MM-DD
   project: string; // UUID
   assigned_to?: number; // User ID
@@ -2146,7 +2148,9 @@ export async function createTask(taskData: TaskPayload): Promise<any> {
       const errorData = await response.json();
       console.error("Create task API error:", errorData);
       throw new Error(
-        errorData.message || errorData.detail || `HTTP error! status: ${response.status}`,
+        errorData.message ||
+          errorData.detail ||
+          `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -2165,14 +2169,16 @@ export interface MilestonePayload {
   title: string;
   code: string;
   description: string;
-  priority: 'low' | 'medium' | 'high' | 'critical';
+  priority: "low" | "medium" | "high" | "critical";
   due_date: string; // YYYY-MM-DD
   owner: number | null; // User ID
-  status: 'not_started' | 'in_progress' | 'blocked' | 'completed';
-  criteria: Array<{ title: string; is_completed: boolean; }>;
+  status: "not_started" | "in_progress" | "blocked" | "completed";
+  criteria: Array<{ title: string; is_completed: boolean }>;
 }
 
-export async function createMilestone(milestoneData: MilestonePayload): Promise<any> {
+export async function createMilestone(
+  milestoneData: MilestonePayload,
+): Promise<any> {
   const token = localStorage.getItem("authToken");
 
   if (!token) {
@@ -2196,7 +2202,9 @@ export async function createMilestone(milestoneData: MilestonePayload): Promise<
       const errorData = await response.json();
       console.error("Create milestone API error:", errorData);
       throw new Error(
-        errorData.message || errorData.detail || `HTTP error! status: ${response.status}`,
+        errorData.message ||
+          errorData.detail ||
+          `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -2209,7 +2217,10 @@ export async function createMilestone(milestoneData: MilestonePayload): Promise<
   }
 }
 
-export async function moveTaskApi(taskId: string, newStatus: TaskViewTask['status']): Promise<void> {
+export async function moveTaskApi(
+  taskId: string,
+  newStatus: TaskViewTask["status"],
+): Promise<void> {
   const token = localStorage.getItem("authToken");
   if (!token) {
     console.error("Authentication token not found.");
@@ -2219,12 +2230,14 @@ export async function moveTaskApi(taskId: string, newStatus: TaskViewTask['statu
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
   if (!apiBaseUrl) {
     console.error("NEXT_PUBLIC_API_BASE_URL is not defined.");
-    throw new Error("API Base URL is not defined. Please check environment variables.");
+    throw new Error(
+      "API Base URL is not defined. Please check environment variables.",
+    );
   }
 
   let cleanId = taskId;
-  if (taskId && taskId.includes('-')) {
-    const parts = taskId.split('-');
+  if (taskId && taskId.includes("-")) {
+    const parts = taskId.split("-");
     const lastPart = parts[parts.length - 1];
     if (!isNaN(Number(lastPart))) {
       cleanId = lastPart;
@@ -2234,12 +2247,16 @@ export async function moveTaskApi(taskId: string, newStatus: TaskViewTask['statu
   // Translate the frontend status to the backend's expected format
   const backendStatus = taskStatusFrontendToBackendMap[newStatus];
   if (!backendStatus) {
-    console.error(`Invalid frontend status provided: ${newStatus}. No mapping found.`);
+    console.error(
+      `Invalid frontend status provided: ${newStatus}. No mapping found.`,
+    );
     throw new Error(`Invalid task status: ${newStatus}.`);
   }
 
   const url = `${apiBaseUrl}/api/projects/tasks/${cleanId}/move/`;
-  console.log(`Attempting PATCH request to URL: ${url} for task ID: ${taskId} (Clean ID: ${cleanId}) with new status: ${backendStatus}`);
+  console.log(
+    `Attempting PATCH request to URL: ${url} for task ID: ${taskId} (Clean ID: ${cleanId}) with new status: ${backendStatus}`,
+  );
 
   try {
     const response = await fetch(url, {
@@ -2251,18 +2268,22 @@ export async function moveTaskApi(taskId: string, newStatus: TaskViewTask['statu
       body: JSON.stringify({ status: backendStatus }), // Send the translated status
     });
 
-                if (!response.ok) {
-                  let errorDetail = `HTTP error! status: ${response.status}`;
-                  try {
-                    const errorData = await response.json();
-                    errorDetail = errorData.detail || errorData.message || JSON.stringify(errorData);
-                  } catch (e) {
-                    errorDetail = await response.text();
-                  }
-                  const errorMessage = `Failed to move task ${taskId}: ${errorDetail}`;
-                  console.error(errorMessage);
-                  throw new Error(errorMessage);
-                }    console.log(`Task ${taskId} moved successfully to ${backendStatus}. Response status: ${response.status}`);
+    if (!response.ok) {
+      let errorDetail = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorDetail =
+          errorData.detail || errorData.message || JSON.stringify(errorData);
+      } catch (e) {
+        errorDetail = await response.text();
+      }
+      const errorMessage = `Failed to move task ${taskId}: ${errorDetail}`;
+      console.error(errorMessage);
+      throw new Error(errorMessage);
+    }
+    console.log(
+      `Task ${taskId} moved successfully to ${backendStatus}. Response status: ${response.status}`,
+    );
   } catch (error: any) {
     const errorMessage = `Network or unexpected error moving task ${taskId}: ${error.message || "Unknown error"}`;
     console.error(errorMessage);
@@ -2271,7 +2292,10 @@ export async function moveTaskApi(taskId: string, newStatus: TaskViewTask['statu
 }
 
 // Function to post a new comment for a task
-export async function createTaskComment(taskId: string, commentText: string): Promise<Comment> {
+export async function createTaskComment(
+  taskId: string,
+  commentText: string,
+): Promise<Comment> {
   const token = localStorage.getItem("authToken");
   if (!token) {
     throw new Error("Authentication token not found. Please log in again.");
@@ -2279,7 +2303,9 @@ export async function createTaskComment(taskId: string, commentText: string): Pr
 
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
   if (!apiBaseUrl) {
-    throw new Error("API Base URL is not defined. Please check environment variables.");
+    throw new Error(
+      "API Base URL is not defined. Please check environment variables.",
+    );
   }
 
   const url = `${apiBaseUrl}/api/projects/task-comments/`; // Provided by user
@@ -2303,7 +2329,8 @@ export async function createTaskComment(taskId: string, commentText: string): Pr
       let errorDetail = `HTTP error! status: ${response.status}`;
       try {
         const errorData = await response.json();
-        errorDetail = errorData.detail || errorData.message || JSON.stringify(errorData);
+        errorDetail =
+          errorData.detail || errorData.message || JSON.stringify(errorData);
       } catch (e) {
         errorDetail = await response.text();
       }
@@ -2313,7 +2340,10 @@ export async function createTaskComment(taskId: string, commentText: string): Pr
     }
 
     const newComment: Comment = await response.json();
-    console.log(`Comment added successfully for task ${taskId}. Response:`, newComment);
+    console.log(
+      `Comment added successfully for task ${taskId}. Response:`,
+      newComment,
+    );
     return newComment;
   } catch (error: any) {
     const errorMessage = `Network or unexpected error adding comment to task ${taskId}: ${error.message || "Unknown error"}`;
@@ -2331,7 +2361,9 @@ export async function getTaskComments(taskId: string): Promise<Comment[]> {
 
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
   if (!apiBaseUrl) {
-    throw new Error("API Base URL is not defined. Please check environment variables.");
+    throw new Error(
+      "API Base URL is not defined. Please check environment variables.",
+    );
   }
 
   // Assuming the API supports filtering by task ID using a query parameter
@@ -2350,7 +2382,8 @@ export async function getTaskComments(taskId: string): Promise<Comment[]> {
       let errorDetail = `HTTP error! status: ${response.status}`;
       try {
         const errorData = await response.json();
-        errorDetail = errorData.detail || errorData.message || JSON.stringify(errorData);
+        errorDetail =
+          errorData.detail || errorData.message || JSON.stringify(errorData);
       } catch (e) {
         errorDetail = await response.text();
       }
@@ -2363,15 +2396,24 @@ export async function getTaskComments(taskId: string): Promise<Comment[]> {
     // Assuming the API returns a paginated response with a 'results' array
     if (rawResponse && Array.isArray(rawResponse.results)) {
       const comments: Comment[] = rawResponse.results;
-      console.log(`Comments fetched successfully for task ${taskId}. Response:`, comments);
+      console.log(
+        `Comments fetched successfully for task ${taskId}. Response:`,
+        comments,
+      );
       return comments;
     } else if (Array.isArray(rawResponse)) {
       // Fallback if the API directly returns an array without pagination
       const comments: Comment[] = rawResponse;
-      console.log(`Comments fetched successfully for task ${taskId}. Response:`, comments);
+      console.log(
+        `Comments fetched successfully for task ${taskId}. Response:`,
+        comments,
+      );
       return comments;
     } else {
-      console.warn(`getTaskComments: Unexpected API response structure for task ${taskId}:`, rawResponse);
+      console.warn(
+        `getTaskComments: Unexpected API response structure for task ${taskId}:`,
+        rawResponse,
+      );
       return []; // Return empty array for unexpected structure
     }
   } catch (error: any) {
@@ -2382,7 +2424,11 @@ export async function getTaskComments(taskId: string): Promise<Comment[]> {
 }
 
 // Function to update a specific comment for a task
-export async function updateTaskComment(commentId: string, taskId: string, commentText: string): Promise<Comment> {
+export async function updateTaskComment(
+  commentId: string,
+  taskId: string,
+  commentText: string,
+): Promise<Comment> {
   const token = localStorage.getItem("authToken");
   if (!token) {
     throw new Error("Authentication token not found. Please log in again.");
@@ -2390,7 +2436,9 @@ export async function updateTaskComment(commentId: string, taskId: string, comme
 
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
   if (!apiBaseUrl) {
-    throw new Error("API Base URL is not defined. Please check environment variables.");
+    throw new Error(
+      "API Base URL is not defined. Please check environment variables.",
+    );
   }
 
   // User provided endpoint: http://18.138.124.3/api/projects/task-comments/{id}
@@ -2401,41 +2449,45 @@ export async function updateTaskComment(commentId: string, taskId: string, comme
     task: taskId, // User indicated 'task' is a required field for PUT
   };
 
-      try {
-        const response = await fetch(url, {
-          method: "PUT", // User specified PUT
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Token ${token}`,
-          },
-          body: JSON.stringify(requestBody),
-        });
-  
-        // Read response body once
-        let responseBody = await response.text();
-        let parsedBody: any;
-        try {
-          parsedBody = JSON.parse(responseBody);
-        } catch (e) {
-          parsedBody = responseBody; // Not JSON, keep as text
-        }
-  
-        if (!response.ok) {
-          const errorDetail = parsedBody?.detail || parsedBody?.message || responseBody;
-          const errorMessage = `Failed to update comment ${commentId} for task ${taskId}: ${errorDetail}`;
-          console.error(errorMessage);
-          throw new Error(errorMessage);
-        }
-  
-        const updatedComment: Comment = parsedBody; // Use the already parsed body for success
-        console.log(`Comment ${commentId} updated successfully. Response:`, updatedComment);
-        return updatedComment;  } catch (error: any) {
+  try {
+    const response = await fetch(url, {
+      method: "PUT", // User specified PUT
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${token}`,
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    // Read response body once
+    let responseBody = await response.text();
+    let parsedBody: any;
+    try {
+      parsedBody = JSON.parse(responseBody);
+    } catch (e) {
+      parsedBody = responseBody; // Not JSON, keep as text
+    }
+
+    if (!response.ok) {
+      const errorDetail =
+        parsedBody?.detail || parsedBody?.message || responseBody;
+      const errorMessage = `Failed to update comment ${commentId} for task ${taskId}: ${errorDetail}`;
+      console.error(errorMessage);
+      throw new Error(errorMessage);
+    }
+
+    const updatedComment: Comment = parsedBody; // Use the already parsed body for success
+    console.log(
+      `Comment ${commentId} updated successfully. Response:`,
+      updatedComment,
+    );
+    return updatedComment;
+  } catch (error: any) {
     const errorMessage = `Network or unexpected error updating comment ${commentId} for task ${taskId}: ${error.message || "Unknown error"}`;
     console.error(errorMessage);
     throw new Error(errorMessage);
   }
 }
-
 
 // Function to delete a specific comment for a task
 export async function deleteTaskComment(commentId: string): Promise<void> {
@@ -2446,7 +2498,9 @@ export async function deleteTaskComment(commentId: string): Promise<void> {
 
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
   if (!apiBaseUrl) {
-    throw new Error("API Base URL is not defined. Please check environment variables.");
+    throw new Error(
+      "API Base URL is not defined. Please check environment variables.",
+    );
   }
 
   const url = `${apiBaseUrl}/api/projects/task-comments/${commentId}/`;
@@ -2466,9 +2520,7 @@ export async function deleteTaskComment(commentId: string): Promise<void> {
       try {
         const errorData = await response.json();
         errorMessage =
-          errorData?.detail ||
-          errorData?.message ||
-          JSON.stringify(errorData);
+          errorData?.detail || errorData?.message || JSON.stringify(errorData);
       } catch {
         errorMessage = await response.text();
       }
@@ -2481,7 +2533,384 @@ export async function deleteTaskComment(commentId: string): Promise<void> {
     throw new Error(
       `Network or unexpected error deleting comment ${commentId}: ${
         error.message || "Unknown error"
-      }`
+      }`,
     );
   }
+}
+
+// New function to fetch project backlog tasks
+export async function fetchProjectBacklogTasks(
+  projectId: string,
+): Promise<Task[]> {
+  const token = localStorage.getItem("authToken");
+
+  if (!token) {
+    throw new Error("Authentication token not found.");
+  }
+
+  try {
+    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/projects/${projectId}/backlog/`;
+    console.log("Fetching project backlog tasks from:", url);
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`,
+      );
+    }
+
+    const data = await response.json();
+    // The API response is directly an array of tasks, not nested under 'results' or 'count'
+    return data;
+  } catch (error: any) {
+    console.error(
+      `Failed to fetch project backlog tasks for project ${projectId}:`,
+      error,
+    );
+    throw new Error(
+      `Failed to fetch project backlog tasks: ${error.message || "Unknown error"}`,
+    );
+  }
+}
+
+// New function to fetch sprint history
+export async function fetchSprintHistory(
+  sprintId: string,
+): Promise<SprintHistoryEntry[]> {
+  const token = localStorage.getItem("authToken");
+
+  if (!token) {
+    throw new Error("Authentication token not found.");
+  }
+
+  try {
+    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/sprints/${sprintId}/history`;
+    console.log("Fetching sprint history from:", url); // Temporary debug log
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`,
+      );
+    }
+
+    const data = await response.json();
+    return data; // Assuming the API returns an array directly
+  } catch (error: any) {
+    console.error(
+      `Failed to fetch sprint history for sprint ${sprintId}:`,
+      error,
+    );
+    throw new Error(
+      `Failed to fetch sprint history: ${error.message || "Unknown error"}`,
+    );
+  }
+}
+
+
+
+
+export async function fetchSprintBurndownData(
+  sprintId: string,
+): Promise<{ dates: string[]; remaining_tasks: number[] }> {
+  const token = localStorage.getItem("authToken");
+
+  if (!token) {
+    throw new Error("Authentication token not found.");
+  }
+
+  try {
+    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/sprints/${sprintId}/burndown/`;
+    console.log(`Fetching burndown data for sprint ${sprintId}:`, url);
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`,
+      );
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    console.error(
+      `Failed to fetch burndown data for sprint ${sprintId}:`,
+      error,
+    );
+    throw new Error(
+      `Failed to fetch burndown data: ${error.message || "Unknown error"}`,
+    );
+  }
+}
+
+// Interfaces for Sprint Capacity and Velocity
+interface SprintMemberCapacity {
+  user: string;
+  role: string;
+  capacity_hours: number;
+}
+
+interface SprintCapacity {
+  total_hours: number;
+  members: SprintMemberCapacity[];
+}
+
+interface SprintVelocity {
+  completed_tasks: number;
+  total_tasks: number;
+  completion_rate: number;
+}
+
+export interface SprintCapacityVelocityResponse {
+  sprint_id: string;
+  capacity: SprintCapacity;
+  velocity: SprintVelocity;
+  status: string; // e.g., "at_risk"
+}
+
+export async function fetchSprintCapacityVelocity(
+  sprintId: string,
+): Promise<SprintCapacityVelocityResponse> {
+  const token = localStorage.getItem("authToken");
+
+  if (!token) {
+    throw new Error("Authentication token not found.");
+  }
+
+  try {
+    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/sprints/${sprintId}/capacity-velocity/`;
+    console.log(`Fetching capacity and velocity data for sprint ${sprintId}:`, url);
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`,
+      );
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    console.error(
+      `Failed to fetch capacity and velocity data for sprint ${sprintId}:`,
+      error,
+    );
+    throw new Error(
+      `Failed to fetch capacity and velocity data: ${error.message || "Unknown error"}`,
+    );
+  }
+}
+
+// Interface for active dashboard tasks
+export interface DashboardTask {
+  id: string;
+  title: string;
+  status: string; // e.g., "review", "in_progress", "todo", "done"
+  priority: string; // e.g., "low", "medium", "high"
+  project_name: string;
+  deadline?: string; // Optional, as not present in all mock/api data
+  assigneeId?: string; // Optional, as not present in all mock/api data
+  projectId?: string; // Optional, as not present in all mock/api data
+}
+
+export async function fetchActiveDashboardTasks(): Promise<DashboardTask[]> {
+  const token = localStorage.getItem("authToken");
+
+  if (!token) {
+    throw new Error("Authentication token not found.");
+  }
+
+  try {
+    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/dashboard/active-tasks/`;
+    console.log(`Fetching active dashboard tasks from:`, url);
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${token}`,
+      },
+    }); 
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`,
+      );
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    console.error(`Failed to fetch active dashboard tasks:`, error);
+    throw new Error(
+      `Failed to fetch active dashboard tasks: ${error.message || "Unknown error"}`,
+    );
+  }
+}
+
+
+
+
+// NEW FUNCTION FETCHING FOR STATUS OVERVIEW 
+
+// Task Status Overview types
+export interface TaskStatusOverview {
+  total_tasks: number;
+  todo: {
+    count: number;
+    percentage: number;
+  };
+  in_progress: {
+    count: number;
+    percentage: number;
+  };
+  done: {
+    count: number;
+    percentage: number;
+  };
+}
+
+export async function fetchTaskStatusOverview(): Promise<TaskStatusOverview> {
+  const token = localStorage.getItem("authToken");
+
+  if (!token) {
+    throw new Error("Authentication token not found.");
+  }
+
+  const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/dashboard/task-status-overview/`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Token ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(
+      errorData.message || `HTTP error! status: ${response.status}`
+    );
+  }
+
+  return await response.json();
+}
+
+// fetch upcoming deadlines interface and fuction
+
+// Upcoming Deadlines Interface
+export interface UpcomingDeadline {
+  id: string;
+  title: string;
+  due_date: string;
+  days_left: number;
+  project_name: string;
+}
+
+export async function fetchUpcomingDeadlines(): Promise<UpcomingDeadline[]> {
+  const token = localStorage.getItem("authToken");
+
+  if (!token) {
+    throw new Error("Authentication token not found.");
+  }
+
+  const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/dashboard/upcoming-deadlines/`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Token ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to fetch upcoming deadlines");
+  }
+
+  const data = await response.json();
+
+  // ⭐ Map response → clean frontend object
+  return data.map((task: any) => ({
+    id: task.id,
+    title: task.title,
+    due_date: task.due_date,
+    days_left: task.days_left,
+    project_name: task.project_name,
+  }));
+}
+
+
+// fetch teamworkload 
+
+export interface TeamWorkload {
+  user_id: number;
+  name: string;
+  role: string;
+  task_count: number;
+  workload_percent: number;
+}
+
+export async function fetchTeamWorkload(): Promise<TeamWorkload[]> {
+  const token = localStorage.getItem("authToken");
+
+  if (!token) {
+    throw new Error("Authentication token not found.");
+  }
+
+  const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/dashboard/team-workload/`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Token ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Failed to fetch team workload");
+  }
+
+  const data = await response.json();
+
+  // ⭐ VERY IMPORTANT — REMOVE DUPLICATES (API me duplicates aa rahe hain)
+  const uniqueUsers = Array.from(
+    new Map(data.map((item: TeamWorkload) => [item.user_id, item])).values()
+  );
+
+  return uniqueUsers;
 }

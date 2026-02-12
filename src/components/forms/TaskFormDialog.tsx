@@ -6,7 +6,8 @@ import {
   fetchSprints,
   fetchMilestones,
 } from '@/lib/api';
-import { Project, Sprint, Milestone, ProjectMember, Task, TaskViewTask } from '@/types';
+import { Project, Milestone, ProjectMember, Task, TaskViewTask } from '@/types';
+import { Sprint } from '@/components/pms/sprint-types';
 import { z } from 'zod';
 import { CalendarIcon, Plus, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';

@@ -4,12 +4,12 @@ import { FolderKanban, CheckSquare, Users, Clock, Calendar, } from 'lucide-react
 import { StatsCard } from './StatsCard';
 import { ProjectCard } from './ProjectCard';
 import { TaskRow } from './TaskRow';
-import { mockTasks, mockProjectMembers } from '@/lib/mockData'; // Removed mockProjects
+import { mockProjectMembers } from '@/lib/mockData'; // Removed mockProjects
 import { PieChart as RechartsPieChart, Pie, Sector, ResponsiveContainer, Legend, Cell } from 'recharts';
 import { useIsMobile } from '@/hooks/use-mobile';
 import React, { useState, useEffect } from 'react';
 import { useSearch } from '@/context/SearchContext'; // Import useSearch
-import { fetchProjects } from "@/lib/api"; // Import the fetchProjects API function
+import { DashboardTask, fetchActiveDashboardTasks, fetchProjects, fetchTaskStatusOverview, fetchTeamWorkload, fetchUpcomingDeadlines, TaskStatusOverview, TeamWorkload, UpcomingDeadline } from "@/lib/api"; // Import the fetchProjects API function
 import { Project } from "@/types"; // Import Project type if not already globally available
 
 
@@ -116,6 +116,28 @@ export const PmsDashboard = () => {
   const [projectsLoading, setProjectsLoading] = useState(true); // Loading state for projects
   const [projectsError, setProjectsError] = useState<string | null>(null); // Error state for projects
   const { searchQuery } = useSearch(); // Use global search context
+  const [tasksToDisplay, setTasksToDisplay] = useState<DashboardTask[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
+  const [tasksError, setTasksError] = useState<string | null>(null);
+  const [taskStatusOverview, setTaskStatusOverview] =
+    useState<TaskStatusOverview | null>(null);
+
+  const [taskStatusLoading, setTaskStatusLoading] = useState(true);
+  const [taskStatusError, setTaskStatusError] = useState<string | null>(null);
+  const [upcomingDeadlines, setUpcomingDeadlines] =
+    useState<UpcomingDeadline[]>([]);
+
+  const [deadlinesLoading, setDeadlinesLoading] = useState(true);
+  const [deadlinesError, setDeadlinesError] = useState<string | null>(null);
+  const [teamWorkload, setTeamWorkload] = useState<TeamWorkload[]>([]);
+  const [workloadLoading, setWorkloadLoading] = useState(true);
+  const [workloadError, setWorkloadError] = useState<string | null>(null);
+
+
+  const isDone = (status: string) => status === 'done';
+  const isInProgress = (status: string) => status === 'in_progress';
+  const isToDo = (status: string) => status === 'to_do';
+  const review = (status: string) => status === 'review';
 
   useEffect(() => {
     setCurrentUserRole(localStorage.getItem('userRole'));
@@ -139,6 +161,89 @@ export const PmsDashboard = () => {
     getProjects();
   }, []);
 
+
+  // fetch active task 
+
+  useEffect(() => {
+    const getActiveTasks = async () => {
+      setTasksLoading(true);
+      setTasksError(null);
+
+      try {
+        const tasks = await fetchActiveDashboardTasks();
+        setTasksToDisplay(tasks);
+      } catch (err: any) {
+        setTasksError(err.message || "Failed to fetch tasks");
+      } finally {
+        setTasksLoading(false);
+      }
+    };
+
+    getActiveTasks();
+
+  }, [])
+
+  //Fetch status overview for pie chart 
+
+  useEffect(() => {
+    const getTaskStatusOverview = async () => {
+      setTaskStatusLoading(true);
+      setTaskStatusError(null);
+
+      try {
+        const data = await fetchTaskStatusOverview();
+        setTaskStatusOverview(data);
+      } catch (err: any) {
+        setTaskStatusError(err.message || "Failed to fetch task status overview");
+      } finally {
+        setTaskStatusLoading(false);
+      }
+    };
+
+    getTaskStatusOverview();
+  }, []);
+
+  // fetch upcoming deadlines for the upcoming deadlines section
+  useEffect(() => {
+    const getUpcomingDeadlines = async () => {
+      setDeadlinesLoading(true);
+      setDeadlinesError(null);
+
+      try {
+        const data = await fetchUpcomingDeadlines();
+        setUpcomingDeadlines(data);
+      } catch (err: any) {
+        setDeadlinesError(err.message || "Failed to fetch deadlines");
+      } finally {
+        setDeadlinesLoading(false);
+      }
+    };
+
+    getUpcomingDeadlines();
+  }, []);
+
+  // fetch team workload data
+
+  useEffect(() => {
+    const getTeamWorkload = async () => {
+      setWorkloadLoading(true);
+      setWorkloadError(null);
+
+      try {
+        const data = await fetchTeamWorkload();
+        setTeamWorkload(data);
+      } catch (err: any) {
+        setWorkloadError(err.message || "Failed to fetch team workload");
+      } finally {
+        setWorkloadLoading(false);
+      }
+    };
+
+    getTeamWorkload();
+  }, []);
+
+
+
   const [activeIndex, setActiveIndex] = React.useState(0);
   const isMobile = useIsMobile();
 
@@ -146,50 +251,42 @@ export const PmsDashboard = () => {
     setActiveIndex(index);
   };
 
-  // --- Role-based data filtering ---
-  let projectsToDisplay: Project[] = []; // Explicitly type as Project[]
-  let tasksToDisplay = [];
+  let projectsToDisplay: Project[] = [];
   let membersToDisplay = [];
 
   if (projectsLoading) {
-    // If projects are still loading, don't try to filter them yet
     projectsToDisplay = [];
-  } else if (currentUserRole === 'admin' || currentUserRole === 'superadmin') {
+  }
+  else if (currentUserRole === 'admin' || currentUserRole === 'superadmin') {
+
+    // ✅ Projects sabko dikhenge
     projectsToDisplay = allProjects;
-    tasksToDisplay = mockTasks;
-    membersToDisplay = mockProjectMembers;
-  } else if (currentUserRole === 'team-leader' && currentUserId) {
-    // For demonstration: Filter projects where the team leader is associated with "Global Tech Inc." client.
-    // In a real application, this would involve more sophisticated filtering based on backend data
-    // e.g., projects where the team leader is explicitly assigned, or whose team members are on the project.
-    
-    // First, find all projects where the current Team Leader is a member
+
+    // ❌ tasksToDisplay ko touch mat karo
+    // API already setTasksToDisplay() kar chuki hai
+
+    membersToDisplay = mockProjectMembers; // (jab tak members API nahi hai)
+
+  }
+  else if (currentUserRole === 'team-leader' && currentUserId) {
+
     const teamLeaderProjectIds = mockProjectMembers
-      .filter(member => member.id === currentUserId) // Assuming currentUserId is the member ID
+      .filter(member => member.id === currentUserId)
       .map(member => member.projectId);
-    
-    // Now filter projects to include only those relevant to the team leader
-    projectsToDisplay = allProjects.filter(project => teamLeaderProjectIds.includes(project.id)); // Use allProjects
 
-    // Filter tasks that belong to these projects
-    const relevantTaskProjectIds = projectsToDisplay.map(p => p.id);
-    tasksToDisplay = mockTasks.filter(task => relevantTaskProjectIds.includes(task.projectId));
+    projectsToDisplay = allProjects.filter(project =>
+      teamLeaderProjectIds.includes(Number(project.id))
+    );
 
-    // Filter members that are part of these projects
-    const relevantMemberProjectIds = projectsToDisplay.map(p => p.id);
-    const relevantMemberIds = mockProjectMembers
-        .filter(member => relevantMemberProjectIds.includes(member.projectId))
-        .map(member => member.id);
-
-    membersToDisplay = mockProjectMembers.filter(member => relevantMemberIds.includes(member.id));
-
-
-  } else {
-    // Default or loading state if role is not determined or unauthorized
+    membersToDisplay = mockProjectMembers.filter(member =>
+      teamLeaderProjectIds.includes(member.projectId)
+    );
+  }
+  else {
     projectsToDisplay = [];
-    tasksToDisplay = [];
     membersToDisplay = [];
   }
+
 
   // Apply search filtering to projectsToDisplay
   const lowerCaseSearchQuery = searchQuery.toLowerCase();
@@ -201,25 +298,49 @@ export const PmsDashboard = () => {
   // --- End Role-based data filtering ---
 
 
-   // Use filteredProjects here
-  const recentTasks = tasksToDisplay.filter(t => t.status !== 'done').slice(0, 5);
+  // Use filteredProjects here
+  const recentTasks = tasksToDisplay
+    .filter(t => !isDone(t.status))
+    .slice(0, 5);
 
   const stats = {
-    totalProjects: filteredProjects.length, // Use filteredProjects for total count
-    activeTasks: tasksToDisplay.filter(t => t.status === 'in_progress').length,
-    completedTasks: tasksToDisplay.filter(t => t.status === 'done').length,
-    teamMembers: membersToDisplay.length, // Display count of relevant members
+    totalProjects: filteredProjects.length,
+    activeTasks: tasksToDisplay.filter(t => isInProgress(t.status)).length,
+    completedTasks: tasksToDisplay.filter(t => isDone(t.status)).length,
+    teamMembers: membersToDisplay.length,
   };
 
-  const taskStatusData = Object.entries(
-    tasksToDisplay.reduce((acc, task) => {
-      acc[task.status] = (acc[task.status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>)
-  ).map(([status, count]) => ({
-    name: status.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()), // Format status for display
-    value: count,
-  }));
+
+  const handleViewTask = (taskId: string) => {
+    console.log("View task", taskId);
+  };
+
+  const handleStatusChange = (taskId: string, newStatus: string) => {
+    setTasksToDisplay(prev =>
+      prev.map(task =>
+        task.id === taskId ? { ...task, status: newStatus } : task
+      )
+    );
+  };
+
+
+  const taskStatusData = taskStatusOverview
+    ? [
+      {
+        name: "To Do",
+        value: taskStatusOverview.todo.count,
+      },
+      {
+        name: "In Progress",
+        value: taskStatusOverview.in_progress.count,
+      },
+      {
+        name: "Done",
+        value: taskStatusOverview.done.count,
+      },
+    ]
+    : [];
+
 
   const today = new Date();
   const sevenDaysFromNow = new Date(today);
@@ -231,15 +352,20 @@ export const PmsDashboard = () => {
     return deadlineDate >= today && deadlineDate <= sevenDaysFromNow;
   });
 
-  const teamWorkloadData = membersToDisplay.map(member => {
-    const assignedTasks = tasksToDisplay.filter(task => // Filter from tasksToDisplay
-      task.assigneeId === member.id && task.status !== 'done'
-    ).length;
-    return {
-      name: member.name,
-      activeTasks: assignedTasks,
-    };
-  }).filter(member => member.activeTasks > 0);
+  // const teamWorkloadData = membersToDisplay.map(member => {
+  //   const assignedTasks = tasksToDisplay.filter(task => // Filter from tasksToDisplay
+  //     task.assigneeId === member.id && !isDone(task.status)
+  //   ).length;
+  //   return {
+  //     name: member.name,
+  //     activeTasks: assignedTasks,
+  //   };
+  // }).filter(member => member.activeTasks > 0);
+
+  const teamWorkloadData = teamWorkload.map(member => ({
+    name: member.name,
+    activeTasks: member.task_count,
+  }));
 
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF']
@@ -263,10 +389,11 @@ export const PmsDashboard = () => {
 
 
 
-  
+
 
   // Show a loading state or nothing if role/ID is not yet determined
-  if (!currentUserRole || !currentUserId || projectsLoading) { // Also check projectsLoading
+  if (!currentUserRole || !currentUserId || projectsLoading || tasksLoading) {
+    // Also check projectsLoading
     return (
       <div className="flex items-center justify-center min-h-[200px] text-muted-foreground">
         Loading dashboard data...
@@ -275,9 +402,9 @@ export const PmsDashboard = () => {
   }
 
 
- 
 
- 
+
+
 
   return (
     <div className="space-y-8 bg-card rounded-md p-4">
@@ -333,8 +460,11 @@ export const PmsDashboard = () => {
             {!projectsLoading && !projectsError && filteredProjects.slice(0, 4).map((project) => ( // Display top 2 projects
               <ProjectCard
                 key={project.id}
-                project={project}
-                members={project.members ?? []}
+                project={{
+                  ...project,
+                  id: Number(project.id),
+                }}
+                members={(project.members ?? []).map(member => ({ name: member.name }))}
               />
             ))}
             {!projectsLoading && !projectsError && filteredProjects.length === 0 && (
@@ -355,11 +485,15 @@ export const PmsDashboard = () => {
           </div>
           <div className="bg-card rounded-xl border border-border">
             {recentTasks.map((task) => (
-              <TaskRow key={task.id} task={task} onViewTask={function (): void {
-                throw new Error('Function not implemented.');
-              } } onStatusChange={function (newStatus: 'To Do' | 'In Progress' | 'Done'): void {
-                throw new Error('Function not implemented.');
-              } } />
+              <TaskRow
+                key={task.id}
+                task={task}
+                onViewTask={() => handleViewTask(task.id)}
+                onStatusChange={(status) =>
+                  handleStatusChange(task.id, status)
+                }
+              />
+
             ))}
             {recentTasks.length === 0 && (
               <div className="p-8 text-center text-muted-foreground">
@@ -376,7 +510,15 @@ export const PmsDashboard = () => {
           </div>
           <div className="bg-card rounded-xl border border-border p-4 h-[350px]">
             {
-              taskStatusData.length > 0 ? (
+              taskStatusLoading ? (
+                <div className="h-full flex items-center justify-center text-muted-foreground">
+                  Loading task status...
+                </div>
+              ) : taskStatusError ? (
+                <div className="h-full flex items-center justify-center text-red-500">
+                  {taskStatusError}
+                </div>
+              ) : taskStatusData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <RechartsPieChart>
                     <Pie
@@ -405,6 +547,7 @@ export const PmsDashboard = () => {
                 </div>
               )
             }
+
           </div>
         </section>
 
@@ -418,46 +561,51 @@ export const PmsDashboard = () => {
           </div>
 
           <div className="bg-card rounded-xl border border-border p-2 space-y-2">
-            {upcomingTasks.length > 0 ? (
-              upcomingTasks.map((task) => {
-                const deadlineDate = new Date(task.deadline);
-                const diffDays = Math.ceil(
-                  (deadlineDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-                );
-
-                return (
-                  <div
-                    key={task.id}
-                    className="flex flex-col md:flex-row gap-4 items-center justify-between p-4 rounded-lg border border-border bg-background hover:shadow-md transition-all"
-                  >
-                    {/* Left */}
-                    <div className="flex flex-col">
-                      <span className="font-medium text-foreground">
-                        {task.title}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        Due on {deadlineDate.toDateString()}
-                      </span>
-                    </div>
-
-                    {/* Right */}
-                    <span
-                      className={`text-xs font-semibold px-3 py-1 rounded-full border ${getUrgencyStyles(
-                        diffDays
-                      )}`}
-                    >
-                      {diffDays <= 0
-                        ? "Overdue"
-                        : `${diffDays} day${diffDays > 1 ? "s" : ""} left`}
+            {deadlinesLoading ? (
+              <div className="p-8 text-center text-muted-foreground">
+                Loading deadlines...
+              </div>
+            ) : deadlinesError ? (
+              <div className="p-8 text-center text-red-500">
+                {deadlinesError}
+              </div>
+            ) : upcomingDeadlines.length > 0 ? (
+              upcomingDeadlines.map((task) => (
+                <div
+                  key={task.id}
+                  className="flex flex-col md:flex-row gap-4 items-center justify-between p-4 rounded-lg border border-border bg-background hover:shadow-md transition-all"
+                >
+                  {/* LEFT */}
+                  <div className="flex flex-col">
+                    <span className="font-medium text-foreground">
+                      {task.title}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Project: {task.project_name}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Due on {new Date(task.due_date).toDateString()}
                     </span>
                   </div>
-                );
-              })
+
+                  {/* RIGHT */}
+                  <span
+                    className={`text-xs font-semibold px-3 py-1 rounded-full border ${getUrgencyStyles(
+                      task.days_left
+                    )}`}
+                  >
+                    {task.days_left <= 0
+                      ? "Overdue"
+                      : `${task.days_left} day${task.days_left > 1 ? "s" : ""} left`}
+                  </span>
+                </div>
+              ))
             ) : (
               <div className="p-8 text-center text-muted-foreground">
                 No tasks due soon
               </div>
             )}
+
           </div>
         </section>
 
@@ -471,56 +619,67 @@ export const PmsDashboard = () => {
           </div>
 
           <div className="bg-card rounded-xl border border-border p-2 space-y-2">
-            {teamWorkloadData.length > 0 ? (
-              teamWorkloadData.map((member) => (
-                <div
-                  key={member.name}
-                  className="p-4 rounded-lg border border-border bg-background hover:shadow-md transition-all"
-                >
-                  {/* Top row */}
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-full bg-[#fa7516]/10 flex items-center justify-center font-semibold text-[#fa7516]">
-                        {member.name.charAt(0)}
+            {
+              workloadLoading ? (
+                <div className="p-8 text-center text-muted-foreground">
+                  Loading team workload...
+                </div>
+              ) : workloadError ? (
+                <div className="p-8 text-center text-red-500">
+                  {workloadError}
+                </div>
+              ) : teamWorkloadData.length > 0 ? (
+                teamWorkloadData.map((member) => (
+                  <div
+                    key={member.name}
+                    className="p-4 rounded-lg border border-border bg-background hover:shadow-md transition-all"
+                  >
+                    {/* Top row */}
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-full bg-[#fa7516]/10 flex items-center justify-center font-semibold text-[#fa7516]">
+                          {member.name.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {member.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Team Member
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-foreground">
-                          {member.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Team Member
-                        </p>
-                      </div>
+
+                      <span className="text-sm font-semibold text-foreground">
+                        {member.activeTasks} Tasks
+                      </span>
                     </div>
 
-                    <span className="text-sm font-semibold text-foreground">
-                      {member.activeTasks} Tasks
-                    </span>
+                    {/* Progress bar */}
+                    <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                      <div
+                        className={`h-2 rounded-full transition-all ${getWorkloadColor(
+                          member.activeTasks
+                        )}`}
+                        style={{
+                          width: `${Math.min(member.activeTasks * 15, 100)}%`,
+                        }}
+                      />
+                    </div>
                   </div>
-
-                  {/* Progress bar */}
-                  <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                    <div
-                      className={`h-2 rounded-full transition-all ${getWorkloadColor(
-                        member.activeTasks
-                      )}`}
-                      style={{
-                        width: `${Math.min(member.activeTasks * 15, 100)}%`,
-                      }}
-                    />
-                  </div>
+                ))
+              ) : (
+                <div className="p-8 text-center text-muted-foreground">
+                  No team workload data available
                 </div>
-              ))
-            ) : (
-              <div className="p-8 text-center text-muted-foreground">
-                No team workload data available
-              </div>
-            )}
+              )
+            }
+
           </div>
         </section>
 
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }
 

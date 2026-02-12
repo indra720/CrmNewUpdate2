@@ -117,12 +117,19 @@ import {
   SprintStatus, SprintType, SprintTask, Sprint, Project, Milestone, User
 } from './sprint-types';
 import {
-  mockProjects, mockUsers, mockMilestones, initialSprints, mockBacklogTasks, burndownData
+  mockProjects, mockUsers, mockMilestones, initialSprints, mockBacklogTasks
 } from './sprint-mock-data';
 import { CreateSprintDialog } from '../forms/CreateSprintDialog'; // Keep import
 import { useSearch } from '@/context/SearchContext';
-import { fetchSprints, fetchSprintsHistory } from '@/lib/api'; // Revert to original import
+import { fetchSprints, fetchProjectBacklogTasks, fetchSprintBurndownData, fetchSprintCapacityVelocity, SprintCapacityVelocityResponse } from '@/lib/api';
+import { Task } from '@/types'; // Revert to original import
 import { useRouter } from 'next/navigation';
+
+interface BurndownDataPoint {
+  day: string;
+  ideal: number;
+  actual: number;
+}
 
 
 // --- Sub-components ---
@@ -223,41 +230,89 @@ const BoardColumn = ({ id, title, tasks }: { id: string, title: string, tasks: S
 
 const ALL_STATUSES: SprintTask['status'][] = ['Todo', 'In Progress', 'Review', 'Done'];
 
+// Helper to map API Task to SprintTask
+const mapTaskToSprintTask = (apiTask: Task): SprintTask => {
+  // Map API status to SprintTask status
+  let sprintTaskStatus: SprintTask['status'];
+  switch (apiTask.status) {
+    case 'todo': sprintTaskStatus = 'Todo'; break;
+    case 'in_progress': sprintTaskStatus = 'In Progress'; break;
+    case 'review': sprintTaskStatus = 'Review'; break;
+    case 'done': sprintTaskStatus = 'Done'; break;
+    case 'blocked': sprintTaskStatus = 'Blocked'; break;
+    default: sprintTaskStatus = 'Todo'; // Default or handle unknown status
+  }
+
+  // Map API priority to SprintTask priority
+  let sprintTaskPriority: SprintTask['priority'];
+  switch (apiTask.priority) {
+    case 'low': sprintTaskPriority = 'Low'; break;
+    case 'medium': sprintTaskPriority = 'Medium'; break;
+    case 'high': sprintTaskPriority = 'High'; break;
+    case 'critical': sprintTaskPriority = 'Urgent'; break; // Map 'critical' to 'Urgent'
+    default: sprintTaskPriority = 'Medium';
+  }
+
+  // Convert estimated_hours to storyPoints (e.g., 1 SP = 4 hours, or a default)
+  const storyPoints = apiTask.estimated_hours ? Math.round(apiTask.estimated_hours / 4) : 0; // Assuming 1 SP = 4 hours, default to 0
+
+  // Map assigned_to (number) to assigneeId (string)
+  const assigneeId = apiTask.assigned_to ? String(apiTask.assigned_to) : undefined;
+
+  let type: SprintTask['type'] = 'Feature'; // Default to Feature, as API Task doesn't have this directly
+  // Additional logic could be added here to infer 'type' from task title/description if a pattern exists.
+
+  return {
+    id: apiTask.id,
+    title: apiTask.title,
+    type: type,
+    priority: sprintTaskPriority,
+    status: sprintTaskStatus,
+    assigneeId: assigneeId,
+    storyPoints: storyPoints,
+    blocked: apiTask.status === 'blocked', // Set blocked based on API status
+    sprintId: apiTask.sprint || undefined, // Add sprintId from API task
+  };
+};
+
 // --- Main Page Component ---
 
 export function Sprints({ isHistoryView = false }: { isHistoryView?: boolean }) {
   const [sprints, setSprints] = useState<Sprint[]>([]); // Initialize with empty array
   const [activeSprint, setActiveSprint] = useState<Sprint | null>(null); // Initialize with null
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [tasks, setTasks] = useState<SprintTask[]>(mockBacklogTasks); // Restore mock tasks
-  const [projectBacklog, setProjectBacklog] = useState<SprintTask[]>([
-    { id: 'TASK-201', title: 'Database Optimization', type: 'Improvement', priority: 'Medium', status: 'Todo', storyPoints: 3 },
-    { id: 'TASK-202', title: 'Email Notification Service', type: 'Feature', priority: 'High', status: 'Todo', storyPoints: 5 },
-    { id: 'TASK-203', title: 'Mobile App CI/CD', type: 'Improvement', priority: 'Low', status: 'Todo', storyPoints: 2 },
-  ]); // Restore mock project backlog
-  const [activeTab, setActiveTab] = useState('board');
+  const [tasks, setTasks] = useState<SprintTask[]>([]); // Restore mock tasks
+  const [projectBacklog, setProjectBacklog] = useState<SprintTask[]>([]); // Restore mock project backlog
+  const [activeTab, setActiveTab] = useState('backlog');
   const [isLoadingSprints, setIsLoadingSprints] = useState(true); // New loading state for sprints
   const [sprintsError, setSprintsError] = useState<string | null>(null); // New error state for sprints
+  const [burndownChartData, setBurndownChartData] = useState<BurndownDataPoint[]>([]);
+  const [isLoadingBurndown, setIsLoadingBurndown] = useState(false);
+  const [capacityVelocityData, setCapacityVelocityData] = useState<SprintCapacityVelocityResponse | null>(null);
+  const [isLoadingCapacityVelocity, setIsLoadingCapacityVelocity] = useState(false);
   const { searchQuery } = useSearch();
 
   const router = useRouter();
   const handleNavigateHistory = () => {
-    router.push(`/admin/project/sprint-history`);
-
+    if (activeSprint) {
+      router.push(`/admin/project/sprint-history?sprintId=${activeSprint.id}`);
+    } else {
+      // Optionally handle the case where no active sprint is selected
+      // For now, navigate to a general history page or show a message
+      router.push(`/admin/project/sprint-history`);
+    }
   }
   // Function to load sprints from API, made reusable
   const loadSprints = async () => {
     setIsLoadingSprints(true);
     setSprintsError(null);
     try {
-      const fetchedSprints: Sprint[] = await fetchSprintsHistory();
-      console.log("Fetched Sprints:", fetchedSprints); // Add this log
+      const fetchedSprints: Sprint[] = await fetchSprints();
       setSprints(fetchedSprints);
       // Set an active sprint, e.g., the first 'Active' one or the first in the list
       if (fetchedSprints.length > 0) {
         const active = fetchedSprints.find(s => s.status === 'Active') || fetchedSprints[0];
-        console.log("Determined Active Sprint:", active); // Add this log
-        setActiveSprint(active);
+        setActiveSprint(active || null); // Ensure activeSprint is never undefined
       }
     } catch (err: any) {
       setSprintsError(err.message || "Failed to fetch sprints.");
@@ -265,11 +320,140 @@ export function Sprints({ isHistoryView = false }: { isHistoryView?: boolean }) 
       setIsLoadingSprints(false);
     }
   };
+  const loadBurndownData = async () => {
+    if (!activeSprint || activeTab !== 'analytics') {
+      setBurndownChartData([]); // Clear data if no active sprint or not on analytics tab
+      return;
+    }
+    setIsLoadingBurndown(true);
+    try {
+      const response = await fetchSprintBurndownData(activeSprint.id);
+      // Assuming `response.dates` and `response.remaining_tasks` are arrays of the same length
+      if (response && response.dates && response.remaining_tasks && activeSprint.story_points_target !== undefined) {
+        const sprintDuration = response.dates.length;
+        const targetPoints = activeSprint.story_points_target;
+        const transformedData: BurndownDataPoint[] = response.dates.map((dateStr, index) => {
+          const idealRemaining = Math.max(0, targetPoints - (targetPoints / sprintDuration) * index); // Linear ideal burndown
+          return {
+            day: format(new Date(dateStr), 'MMM d'), // Format date for display
+            ideal: parseFloat(idealRemaining.toFixed(1)), // Keep one decimal for ideal
+            actual: response.remaining_tasks[index],
+          };
+        });
+        setBurndownChartData(transformedData);
+      } else {
+
+        setBurndownChartData([]); // Clear data if response is invalid
+
+      }
+
+    } catch (error) {
+
+      console.error("Failed to fetch burndown data:", error);
+
+      setBurndownChartData([]);
+
+    } finally {
+
+      setIsLoadingBurndown(false);
+
+    }
+
+  };
+
+  const loadCapacityVelocityData = async () => {
+    if (!activeSprint || activeTab !== 'analytics') {
+      setCapacityVelocityData(null);
+      return;
+    }
+    setIsLoadingCapacityVelocity(true);
+    try {
+      const response = await fetchSprintCapacityVelocity(activeSprint.id);
+      setCapacityVelocityData(response);
+    } catch (error) {
+      console.error("Failed to fetch capacity and velocity data:", error);
+      setCapacityVelocityData(null);
+    } finally {
+      setIsLoadingCapacityVelocity(false);
+    }
+
+  };
+
+
 
   // Effect to load sprints on component mount
+
   useEffect(() => {
+
     loadSprints();
+
   }, []); // Empty dependency array means this runs once on mount
+
+
+
+  // Effect to load project backlog tasks when activeSprint changes
+
+  useEffect(() => {
+
+    if (activeSprint && activeSprint.project) {
+
+      const loadProjectBacklog = async () => {
+
+        try {
+
+          const fetchedApiTasks = await fetchProjectBacklogTasks(activeSprint.project);
+
+          const mappedAllProjectTasks = fetchedApiTasks.map(mapTaskToSprintTask);
+          // Filter tasks for the active sprint (Sprint Items)
+          const sprintItems = mappedAllProjectTasks.filter(task => task.sprintId === activeSprint.id);
+          setTasks(sprintItems); // Populate 'tasks' state for Sprint Items
+          // Filter tasks not assigned to any sprint or not to the active sprint (Project Backlog)
+
+          // This assumes `apiTask.sprint` is null for unassigned tasks, or we filter explicitly by `activeSprint.id`.
+
+          const projectBacklogItems = mappedAllProjectTasks.filter(task => task.sprintId !== activeSprint.id);
+
+          setProjectBacklog(projectBacklogItems); // Populate 'projectBacklog' state for Project Backlog
+
+
+
+        } catch (err: any) {
+
+          console.error("Failed to fetch project backlog tasks:", err);
+
+          // Handle error state for project backlog if needed
+
+        }
+
+      };
+
+      loadProjectBacklog();
+
+    } else {
+
+      // Clear tasks and backlog if no active sprint or project is selected/available
+
+      setTasks([]); // Clear sprint items
+
+      setProjectBacklog([]); // Clear project backlog
+
+    }
+
+  }, [activeSprint]); // Dependency array includes activeSprint
+
+
+
+  // Effect to load burndown data when activeSprint or activeTab changes
+
+  useEffect(() => {
+
+    loadBurndownData();
+
+    loadCapacityVelocityData(); // Load capacity/velocity data here
+
+  }, [activeSprint, activeTab]);
+
+
 
   // newSprint and errors state are now managed inside CreateSprintDialog.tsx
   // No need for these states here anymore.
@@ -297,7 +481,13 @@ export function Sprints({ isHistoryView = false }: { isHistoryView?: boolean }) 
   // Derived Values
   const totalStoryPoints = useMemo(() => filteredTasks.reduce((sum, t) => sum + t.storyPoints, 0), [filteredTasks]);
   const completedStoryPoints = useMemo(() => filteredTasks.filter(t => t.status === 'Done').reduce((sum, t) => sum + t.storyPoints, 0), [filteredTasks]);
-  const progressPercent = activeSprint ? (completedStoryPoints / activeSprint.storyPointsTarget) * 100 : 0;
+  const progressPercent = activeSprint && activeSprint.story_points_target > 0 ? (completedStoryPoints / activeSprint.story_points_target) * 100 : 0;
+
+  const progressBarColorClass = useMemo(() => {
+    if (progressPercent < 40) return 'bg-red-500';
+    if (progressPercent < 70) return 'bg-orange-500';
+    return 'bg-green-500';
+  }, [progressPercent]);
 
   // This function now receives *validated* sprint data from CreateSprintDialog
   const handleSaveNewSprint = async (sprintData: Partial<Sprint>) => { // Make async
@@ -336,7 +526,7 @@ export function Sprints({ isHistoryView = false }: { isHistoryView?: boolean }) 
     const overId = over.id as string;
 
     // Check if dropping into a column
-    const columns: SprintTask['status'][] = ['Todo', 'In Progress', 'Review', 'Done'];
+    const columns: SprintTask['status'][] = ['Todo', 'In Progress', 'Review', 'Done', 'Blocked'];
     if (columns.includes(overId as any)) {
       setTasks(prev => prev.map(t => t.id === activeId ? { ...t, status: overId as any } : t));
     }
@@ -381,18 +571,18 @@ export function Sprints({ isHistoryView = false }: { isHistoryView?: boolean }) 
                   <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30 uppercase text-[10px]">
                     {activeSprint.status}
                   </Badge>
-                  <span className="text-sm opacity-80">{activeSprint.number}</span>
+                  <span className="text-sm opacity-80">{activeSprint.sprint_number}</span>
                 </div>
                 <h2 className="text-xl font-bold mb-1">{activeSprint.name}</h2>
                 <p className="text-sm opacity-90 line-clamp-1 italic">"{activeSprint.goal}"</p>
                 <div className="flex items-center gap-4 mt-4 text-xs opacity-80">
                   <div className="flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
-                    {format(new Date(activeSprint.startDate), 'MMM d')} - {format(new Date(activeSprint.endDate), 'MMM d')}
+                    {activeSprint.start_date && activeSprint.end_date ? `${format(new Date(activeSprint.start_date), 'MMM d')} - ${format(new Date(activeSprint.end_date), 'MMM d')}` : 'N/A'}
                   </div>
                   <div className="flex items-center gap-1">
                     <Target className="w-3 h-3" />
-                    {activeSprint.storyPointsTarget} SP Target
+                    {activeSprint.story_points_target} SP Target
                   </div>
                 </div>
               </div>
@@ -401,7 +591,10 @@ export function Sprints({ isHistoryView = false }: { isHistoryView?: boolean }) 
                   <span className="text-sm font-medium">Sprint Progress</span>
                   <span className="text-sm font-bold">{Math.round(progressPercent)}%</span>
                 </div>
-                <Progress value={progressPercent} className="h-2 bg-primary-foreground/20" />
+                <Progress
+                  value={progressPercent}
+                  className={`h-2 bg-primary-foreground/20 [&>div]:${progressBarColorClass}`}
+                />
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
                   <div>
                     <p className="text-[10px] uppercase opacity-70 tracking-wider">Completed</p>
@@ -409,7 +602,7 @@ export function Sprints({ isHistoryView = false }: { isHistoryView?: boolean }) 
                   </div>
                   <div>
                     <p className="text-[10px] uppercase opacity-70 tracking-wider">Days Left</p>
-                    <p className="text-lg font-bold">{differenceInDays(new Date(activeSprint.endDate), new Date())} <span className="text-sm font-normal opacity-70">days</span></p>
+                    <p className="text-lg font-bold">{activeSprint.end_date ? differenceInDays(new Date(activeSprint.end_date), new Date()) : 'N/A'} <span className="text-sm font-normal opacity-70">days</span></p>
                   </div>
                   <div>
                     <p className="text-[10px] uppercase opacity-70 tracking-wider">Sprint Health</p>
@@ -451,10 +644,10 @@ export function Sprints({ isHistoryView = false }: { isHistoryView?: boolean }) 
       <Tabs defaultValue="board" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-card p-4 rounded-xl border shadow-sm">
           <TabsList className="bg-transparent border-none w-[280px] sm:w-full overflow-x-auto justify-start h-auto p-2">
-            <TabsTrigger value="board" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg gap-2 text-md sm:text-md py-2 px-3">
+            {/* <TabsTrigger value="board" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg gap-2 text-md sm:text-md py-2 px-3">
               <LayoutGrid className="w-4 h-4" />
               Sprint Board
-            </TabsTrigger>
+            </TabsTrigger> */}
             <TabsTrigger value="backlog" className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-lg gap-2 text-xs sm:text-sm py-2 px-3">
               <History className="w-4 h-4" />
               Sprint Backlog
@@ -475,20 +668,6 @@ export function Sprints({ isHistoryView = false }: { isHistoryView?: boolean }) 
               </Button>
             </div> */}
         </div>
-
-        {/* 4. SPRINT BOARD */}
-        <TabsContent value="board" className="mt-0">
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <div className="">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3  gap-6 h-full">
-                {boardColumns.map(status => (
-                  <BoardColumn key={status} title={status} id={status} tasks={filteredTasks.filter(t => t.status === status)} />
-                ))}
-              </div>
-            </div>
-          </DndContext>
-        </TabsContent>
-
         {/* 3. SPRINT BACKLOG */}
         <TabsContent value="backlog" className="mt-0 ">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -563,7 +742,7 @@ export function Sprints({ isHistoryView = false }: { isHistoryView?: boolean }) 
                           key={task.id}
                           className="p-3 border rounded-lg bg-muted/50 hover:bg-background hover:border-primary transition-all cursor-pointer group"
                           onClick={() => {
-                            if (totalStoryPoints + task.storyPoints > (activeSprint?.storyPointsTarget || 100)) {
+                            if (totalStoryPoints + task.storyPoints > (activeSprint?.story_points_target || 100)) {
                               alert("Warning: This task will exceed sprint capacity target!");
                             }
                             setTasks([...tasks, task]);
@@ -590,29 +769,13 @@ export function Sprints({ isHistoryView = false }: { isHistoryView?: boolean }) 
                   <CardTitle className="text-lg">Resource Allocation</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {activeSprint && activeSprint.teamMembers.map(memberId => {
-                    const user = mockUsers.find(u => u.id === memberId);
-                    const userTasks = tasks.filter(t => t.assigneeId === memberId);
-                    const points = userTasks.reduce((sum, t) => sum + t.storyPoints, 0);
-                    const capacity = activeSprint.capacity[memberId] || 0;
-                    const load = (points * 4) / (capacity || 1) * 100; // Mock: 1 SP = 4 hours
-
-                    return (
-                      <div key={memberId} className="space-y-1.5">
-                        <div className="flex justify-between text-xs">
-                          <span className="font-medium">{user?.name}</span>
-                          <span className={load > 90 ? 'text-red-600 font-bold' : 'text-muted-foreground'}>{points} SP / {capacity}h</span>
-                        </div>
-                        <Progress value={load} className={`h-1.5 ${load > 90 ? 'bg-red-100 dark:bg-red-900/50 [&>div]:bg-red-500' : ''}`} />
-                      </div>
-                    );
-                  })}
-                  {activeTab === 'backlog' && (
-                    <div className="bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-700/40 p-3 rounded-lg flex gap-3">
-                      <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
-                      <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
-                        <strong>Capacity Warning:</strong> Elena Rodriguez is currently at 110% capacity. Consider reassigning tasks.
-                      </p>
+                  {activeSprint ? (
+                    <div className="text-sm text-muted-foreground text-center py-4">
+                      Resource allocation details (team members, capacity) are not available from the current API response for this sprint.
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground text-center py-4">
+                      No active sprint selected.
                     </div>
                   )}
                 </CardContent>
@@ -631,23 +794,27 @@ export function Sprints({ isHistoryView = false }: { isHistoryView?: boolean }) 
               </CardHeader>
               <CardContent>
                 <div className="h-[350px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={burndownData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                      <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
-                      <RechartsTooltip
-                        contentStyle={{
-                          background: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: 'var(--radius)',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                        }}
-                      />
-                      <Line type="monotone" dataKey="ideal" stroke="hsl(var(--muted-foreground))" strokeDasharray="5 5" dot={false} strokeWidth={2} name="Ideal Burndown" />
-                      <Line type="monotone" dataKey="actual" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4, fill: 'hsl(var(--primary))' }} activeDot={{ r: 6 }} name="Actual Burndown" />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  {isLoadingBurndown ? (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">Loading Burndown Chart...</div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={burndownChartData}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                        <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
+                        <RechartsTooltip
+                          contentStyle={{
+                            background: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: 'var(--radius)',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                          }}
+                        />
+                        <Line type="monotone" dataKey="ideal" stroke="hsl(var(--muted-foreground))" strokeDasharray="5 5" dot={false} strokeWidth={2} name="Ideal Burndown" />
+                        <Line type="monotone" dataKey="actual" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4, fill: 'hsl(var(--primary))' }} activeDot={{ r: 6 }} name="Actual Burndown" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -657,10 +824,16 @@ export function Sprints({ isHistoryView = false }: { isHistoryView?: boolean }) 
                   <CardTitle className="text-muted-foreground text-sm font-medium uppercase tracking-wider">Sprint Velocity</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold">22.4</span>
-                    <span className="text-muted-foreground text-sm">pts / sprint</span>
-                  </div>
+                  {isLoadingCapacityVelocity ? (
+                    <div className="text-sm text-muted-foreground">Loading...</div>
+                  ) : capacityVelocityData ? (
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-4xl font-bold">{capacityVelocityData.velocity.completed_tasks}</span>
+                      <span className="text-muted-foreground text-sm">pts / sprint</span>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">No data</div>
+                  )}
                   <div className="mt-4 h-[60px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={[
@@ -701,13 +874,44 @@ export function Sprints({ isHistoryView = false }: { isHistoryView?: boolean }) 
                       <Activity className="w-4 h-4 text-primary" />
                       <span className="text-sm font-bold">Sprint Health</span>
                     </div>
-                    <div className="p-3 bg-green-50 border border-green-100 dark:bg-green-900/20 dark:border-green-800/40 rounded-lg">
-                      <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span className="text-xs font-semibold uppercase">Healthy</span>
+                    {isLoadingCapacityVelocity ? (
+                      <div className="text-sm text-muted-foreground">Loading...</div>
+                    ) : capacityVelocityData ? (
+                      <div className={`p-3 rounded-lg ${capacityVelocityData.status === 'at_risk'
+                        ? 'bg-orange-50 border border-orange-100 dark:bg-orange-900/20 dark:border-orange-800/40'
+                        : capacityVelocityData.status === 'critical'
+                          ? 'bg-red-50 border border-red-100 dark:bg-red-900/20 dark:border-red-800/40'
+                          : 'bg-green-50 border border-green-100 dark:bg-green-900/20 dark:border-green-800/40'
+                        }`}>
+                        <div className={`flex items-center gap-2 ${capacityVelocityData.status === 'at_risk'
+                          ? 'text-orange-700 dark:text-orange-400'
+                          : capacityVelocityData.status === 'critical'
+                            ? 'text-red-700 dark:text-red-400'
+                            : 'text-green-700 dark:text-green-400'
+                          }`}>
+                          {capacityVelocityData.status === 'at_risk' && <AlertCircle className="w-4 h-4" />}
+                          {capacityVelocityData.status === 'critical' && <AlertCircle className="w-4 h-4" />}
+                          {capacityVelocityData.status !== 'at_risk' && capacityVelocityData.status !== 'critical' && <CheckCircle2 className="w-4 h-4" />}
+                          <span className="text-xs font-semibold uppercase">
+                            {capacityVelocityData.status === 'at_risk' ? 'At Risk' :
+                              capacityVelocityData.status === 'critical' ? 'Critical' :
+                                'Healthy'}
+                          </span>
+                        </div>
+                        <p className={`text-[10px] mt-1 ${capacityVelocityData.status === 'at_risk'
+                          ? 'text-orange-600 dark:text-orange-300'
+                          : capacityVelocityData.status === 'critical'
+                            ? 'text-red-600 dark:text-red-300'
+                            : 'text-green-600 dark:text-green-300'
+                          }`}>
+                          {capacityVelocityData.status === 'at_risk' ? 'Sprint is facing some challenges.' :
+                            capacityVelocityData.status === 'critical' ? 'Sprint is in serious trouble.' :
+                              'Sprint is on track to complete all committed story points.'}
+                        </p>
                       </div>
-                      <p className="text-[10px] text-green-600 dark:text-green-300 mt-1">Sprint is on track to complete all committed story points.</p>
-                    </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">No data</div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

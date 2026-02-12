@@ -34,7 +34,8 @@
   import { Textarea } from '@/components/ui/textarea';
 
   // --- Centralized Types ---
-  import { Sprint, User, SprintType, Project } from '@/types';
+  import { User, Project } from '@/types';
+import { Sprint, SprintType } from '@/components/pms/sprint-types';
 
   // --- Centralized Mock Data ---
   import { mockUsers } from '@/components/pms/sprint-mock-data';
@@ -43,7 +44,7 @@
   interface CreateSprintDialogProps {
     isCreateDialogOpen: boolean;
     setIsCreateDialogOpen: (open: boolean) => void;
-    onSaveSprint: (sprintData: Partial<Sprint>) => void;
+    onSaveSprint: (sprintData: Partial<Sprint>) => Promise<void>;
     sprintsLength: number;
     allSprints: Sprint[];
   }
