@@ -2732,6 +2732,7 @@ export async function fetchSprintCapacityVelocity(
 
 // Interface for active dashboard tasks
 export interface DashboardTask {
+  description: any;
   id: string;
   title: string;
   status: string; // e.g., "review", "in_progress", "todo", "done"

@@ -259,10 +259,10 @@ export const PmsDashboard = () => {
   }
   else if (currentUserRole === 'admin' || currentUserRole === 'superadmin') {
 
-    // ✅ Projects sabko dikhenge
+    //  Projects sabko dikhenge
     projectsToDisplay = allProjects;
 
-    // ❌ tasksToDisplay ko touch mat karo
+    //  tasksToDisplay ko touch mat karo
     // API already setTasksToDisplay() kar chuki hai
 
     membersToDisplay = mockProjectMembers; // (jab tak members API nahi hai)
@@ -295,11 +295,17 @@ export const PmsDashboard = () => {
     project.description.toLowerCase().includes(lowerCaseSearchQuery)
   );
 
+  // Apply search filtering to tasksToDisplay
+  const filteredTasks = tasksToDisplay.filter(task =>
+    (task.title ?? '').toLowerCase().includes(lowerCaseSearchQuery) ||
+    (task.description ?? '').toLowerCase().includes(lowerCaseSearchQuery)
+  );
+
   // --- End Role-based data filtering ---
 
 
   // Use filteredProjects here
-  const recentTasks = tasksToDisplay
+  const recentTasks = filteredTasks
     .filter(t => !isDone(t.status))
     .slice(0, 5);
 
@@ -349,7 +355,11 @@ export const PmsDashboard = () => {
   const upcomingTasks = tasksToDisplay.filter(task => {
     if (task.status === 'done' || !task.deadline) return false;
     const deadlineDate = new Date(task.deadline);
-    return deadlineDate >= today && deadlineDate <= sevenDaysFromNow;
+    const matchesSearch =
+      (task.title ?? '').toLowerCase().includes(lowerCaseSearchQuery) ||
+      (task.project_name ?? '').toLowerCase().includes(lowerCaseSearchQuery); // Assuming project_name is available for search
+
+    return matchesSearch && deadlineDate >= today && deadlineDate <= sevenDaysFromNow;
   });
 
   // const teamWorkloadData = membersToDisplay.map(member => {
@@ -367,6 +377,10 @@ export const PmsDashboard = () => {
     activeTasks: member.task_count,
   }));
 
+  // Apply search filtering to teamWorkloadData
+  const filteredTeamWorkload = teamWorkloadData.filter(member =>
+    member.name.toLowerCase().includes(lowerCaseSearchQuery)
+  );
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF']
 
@@ -447,61 +461,83 @@ export const PmsDashboard = () => {
       {/* Main Content Grid - Two Columns (or more as needed) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Recent Projects - Spans full width on large screens */}
-        <section className="lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground">Recent Projects</h2>
-            <a href={`/${currentUserRole}/project/all`} className="text-sm text-white hover:underline bg-[#fa7516] p-2 rounded-md">
-              View all
-            </a>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {projectsLoading && <p className="col-span-2 text-center py-4">Loading projects...</p>}
-            {projectsError && <p className="col-span-2 text-center py-4 text-red-500">Error: {projectsError}</p>}
-            {!projectsLoading && !projectsError && filteredProjects.slice(0, 4).map((project) => ( // Display top 2 projects
-              <ProjectCard
-                key={project.id}
-                project={{
-                  ...project,
-                  id: Number(project.id),
-                }}
-                members={(project.members ?? []).map(member => ({ name: member.name }))}
-              />
-            ))}
-            {!projectsLoading && !projectsError && filteredProjects.length === 0 && (
-              <div className="col-span-2 p-8 text-center text-muted-foreground">
-                No recent projects found.
-              </div>
-            )}
-          </div>
-        </section>
-
+        {(searchQuery === '' || filteredProjects.length > 0) && (
+          <section className="lg:col-span-2">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-foreground">Recent Projects</h2>
+              <a href={`/${currentUserRole}/project/all`} className="text-sm text-white hover:underline bg-[#fa7516] p-2 rounded-md">
+                View all
+              </a>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {projectsLoading && <p className="col-span-2 text-center py-4">Loading projects...</p>}
+              {projectsError && <p className="col-span-2 text-center py-4 text-red-500">Error: {projectsError}</p>}
+              {!projectsLoading && !projectsError && filteredProjects.slice(0, 4).map((project) => ( // Display top 2 projects
+                <ProjectCard
+                  key={project.id}
+                  project={{
+                    ...project,
+                    id: Number(project.id),
+                  }}
+                  members={(project.members ?? []).map(member => ({ name: member.name }))}
+                />
+              ))}
+              {!projectsLoading && !projectsError && filteredProjects.length === 0 && (
+                <div className="col-span-2 p-8 text-center text-muted-foreground">
+                  No recent projects found.
+                </div>
+              )}
+            </div>
+          </section>
+        )}
         {/* Active Tasks Section */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground">Active Tasks</h2>
-            <a href={`/${currentUserRole}/tasks`} className="text-sm text-white hover:underline bg-[#fa7516] p-2 rounded-md">
-              View all
-            </a>
-          </div>
-          <div className="bg-card rounded-xl border border-border">
-            {recentTasks.map((task) => (
-              <TaskRow
-                key={task.id}
-                task={task}
-                onViewTask={() => handleViewTask(task.id)}
-                onStatusChange={(status) =>
-                  handleStatusChange(task.id, status)
+        {(searchQuery === '' || recentTasks.length > 0) && (
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-foreground">Active Tasks</h2>
+              <a href={(() => {
+                let tasksPageHref = '';
+                switch (currentUserRole) {
+                  case 'admin':
+                    tasksPageHref = '/admin/project/tasks';
+                    break;
+                  case 'superadmin':
+                    tasksPageHref = '/superadmin/projects/tasks';
+                    break;
+                  case 'staff':
+                    tasksPageHref = '/staff/tasks';
+                    break;
+                  case 'team-leader':
+                    tasksPageHref = '/team-leader/project/tasks';
+                    break;
+                  default:
+                    tasksPageHref = '/'; // Fallback or handle unknown role
                 }
-              />
+                return tasksPageHref;
+              })()} className="text-sm text-white hover:underline bg-[#fa7516] p-2 rounded-md">
+                View all
+              </a>
+            </div>
+            <div className="bg-card rounded-xl border border-border">
+              {recentTasks.map((task) => (
+                <TaskRow
+                  key={task.id}
+                  task={task}
+                  onViewTask={() => handleViewTask(task.id)}
+                  onStatusChange={(status) =>
+                    handleStatusChange(task.id, status)
+                  }
+                />
 
-            ))}
-            {recentTasks.length === 0 && (
-              <div className="p-8 text-center text-muted-foreground">
-                No active tasks
-              </div>
-            )}
-          </div>
-        </section>
+              ))}
+              {recentTasks.length === 0 && (
+                <div className="p-8 text-center text-muted-foreground">
+                  No active tasks
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* Task Status Overview */}
         <section>
@@ -552,131 +588,137 @@ export const PmsDashboard = () => {
         </section>
 
 
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-[#fa7516]" />
-              Upcoming Deadlines
-            </h2>
-          </div>
+        {(searchQuery === '' || upcomingDeadlines.length > 0) && (
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-[#fa7516]" />
+                Upcoming Deadlines
+              </h2>
+            </div>
 
-          <div className="bg-card rounded-xl border border-border p-2 space-y-2">
-            {deadlinesLoading ? (
-              <div className="p-8 text-center text-muted-foreground">
-                Loading deadlines...
-              </div>
-            ) : deadlinesError ? (
-              <div className="p-8 text-center text-red-500">
-                {deadlinesError}
-              </div>
-            ) : upcomingDeadlines.length > 0 ? (
-              upcomingDeadlines.map((task) => (
-                <div
-                  key={task.id}
-                  className="flex flex-col md:flex-row gap-4 items-center justify-between p-4 rounded-lg border border-border bg-background hover:shadow-md transition-all"
-                >
-                  {/* LEFT */}
-                  <div className="flex flex-col">
-                    <span className="font-medium text-foreground">
-                      {task.title}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      Project: {task.project_name}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      Due on {new Date(task.due_date).toDateString()}
-                    </span>
-                  </div>
-
-                  {/* RIGHT */}
-                  <span
-                    className={`text-xs font-semibold px-3 py-1 rounded-full border ${getUrgencyStyles(
-                      task.days_left
-                    )}`}
-                  >
-                    {task.days_left <= 0
-                      ? "Overdue"
-                      : `${task.days_left} day${task.days_left > 1 ? "s" : ""} left`}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div className="p-8 text-center text-muted-foreground">
-                No tasks due soon
-              </div>
-            )}
-
-          </div>
-        </section>
-
-
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <Users className="h-5 w-5 text-[#fa7516]" />
-              Team Workload
-            </h2>
-          </div>
-
-          <div className="bg-card rounded-xl border border-border p-2 space-y-2">
-            {
-              workloadLoading ? (
+            <div className="bg-card rounded-xl border border-border p-2 space-y-2">
+              {deadlinesLoading ? (
                 <div className="p-8 text-center text-muted-foreground">
-                  Loading team workload...
+                  Loading deadlines...
                 </div>
-              ) : workloadError ? (
+              ) : deadlinesError ? (
                 <div className="p-8 text-center text-red-500">
-                  {workloadError}
+                  {deadlinesError}
                 </div>
-              ) : teamWorkloadData.length > 0 ? (
-                teamWorkloadData.map((member) => (
+              ) : upcomingDeadlines.length > 0 ? (
+                upcomingDeadlines.map((task) => (
                   <div
-                    key={member.name}
-                    className="p-4 rounded-lg border border-border bg-background hover:shadow-md transition-all"
+                    key={task.id}
+                    className="flex flex-col sm:flex-row gap-4 items-center justify-between p-4 rounded-lg border border-border bg-background hover:shadow-md transition-all"
                   >
-                    {/* Top row */}
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-[#fa7516]/10 flex items-center justify-center font-semibold text-[#fa7516]">
-                          {member.name.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="font-medium text-foreground">
-                            {member.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Team Member
-                          </p>
-                        </div>
-                      </div>
-
-                      <span className="text-sm font-semibold text-foreground">
-                        {member.activeTasks} Tasks
+                    {/* LEFT */}
+                    <div className="flex flex-col  md:items-center gap-2">
+                      <span className="font-medium text-foreground">
+                        {task.title}
                       </span>
+                      <span className="text-md text-muted-foreground">
+                        Project: {task.project_name}
+                      </span>
+
                     </div>
 
-                    {/* Progress bar */}
-                    <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                      <div
-                        className={`h-2 rounded-full transition-all ${getWorkloadColor(
-                          member.activeTasks
+                    {/* RIGHT */}
+                    <div className='flex flex-col justify-end items-end'>
+                      <span
+                        className={`text-xs font-semibold px-3 py-1 rounded-full border  sm:w-[80px] ${getUrgencyStyles(
+                          task.days_left
                         )}`}
-                        style={{
-                          width: `${Math.min(member.activeTasks * 15, 100)}%`,
-                        }}
-                      />
+                      >
+                        {task.days_left <= 0
+                          ? "Overdue"
+                          : `${task.days_left} day${task.days_left > 1 ? "s" : ""} left`}
+                      </span>
+                      <span className="text-md text-muted-foreground">
+                        Due on {new Date(task.due_date).toDateString()}
+                      </span>
                     </div>
                   </div>
                 ))
               ) : (
                 <div className="p-8 text-center text-muted-foreground">
-                  No team workload data available
+                  No tasks due soon
                 </div>
-              )
-            }
+              )}
 
-          </div>
-        </section>
+            </div>
+          </section>
+        )}
+
+        {(searchQuery === '' || filteredTeamWorkload.length > 0) && (
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <Users className="h-5 w-5 text-[#fa7516]" />
+                Team Workload
+              </h2>
+            </div>
+
+            <div className="bg-card rounded-xl border border-border p-2 space-y-2 h-[350px] overflow-y-auto">
+              {
+                workloadLoading ? (
+                  <div className="p-8 text-center text-muted-foreground">
+                    Loading team workload...
+                  </div>
+                ) : workloadError ? (
+                  <div className="p-8 text-center text-red-500">
+                    {workloadError}
+                  </div>
+                ) : filteredTeamWorkload.length > 0 ? (
+                  filteredTeamWorkload.map((member) => (
+                    <div
+                      key={member.name}
+                      className="p-4 rounded-lg border border-border bg-background hover:shadow-md transition-all"
+                    >
+                      {/* Top row */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-full bg-[#fa7516]/10 flex items-center justify-center font-semibold text-[#fa7516]">
+                            {member.name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">
+                              {member.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Team Member
+                            </p>
+                          </div>
+                        </div>
+
+                        <span className="text-sm font-semibold text-foreground">
+                          {member.activeTasks} Tasks
+                        </span>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                        <div
+                          className={`h-2 rounded-full transition-all ${getWorkloadColor(
+                            member.activeTasks
+                          )}`}
+                          style={{
+                            width: `${Math.min(member.activeTasks * 15, 100)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground">
+                    No team workload data available
+                  </div>
+                )
+              }
+
+            </div>
+          </section>
+        )}
 
       </div >
     </div >

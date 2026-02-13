@@ -154,14 +154,15 @@ const TeamView = () => {
             <p className="text-muted-foreground">Manage your project team members.</p>
           </div>
           {/* Only Admin and Superadmin can add members */}
-          {(currentUserRole === 'admin' || currentUserRole === 'superadmin') && (
+          {/* Only Admin and Superadmin can add members */}
+          {/* {(currentUserRole === 'admin' || currentUserRole === 'superadmin') && (
               <Button size="sm" className="gap-2" onClick={() => setIsAddMemberDialogOpen(true)}>
               <Plus className="w-4 h-4" />
               Add Member
               </Button>
-          )}
+          )} */}
         </div>
-  
+    {/*  */}
         {/* Team Overview Metrics */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard 
