@@ -6,16 +6,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Eye, Pencil, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Eye } from 'lucide-react';
 
 interface TeamMemberListProps {
   teamMembers: TeamMember[];
   onViewMember: (member: TeamMember) => void;
-  onEditMember: (member: TeamMember) => void;
-  onRemoveMember: (member: TeamMember) => void;
 }
 
-const TeamMemberList: React.FC<TeamMemberListProps> = ({ teamMembers, onViewMember, onEditMember, onRemoveMember }) => {
+const TeamMemberList: React.FC<TeamMemberListProps> = ({ teamMembers, onViewMember }) => {
   return (
     <div className="border rounded-lg">
       <Table>
@@ -61,12 +59,7 @@ const TeamMemberList: React.FC<TeamMemberListProps> = ({ teamMembers, onViewMemb
                     <DropdownMenuContent align="end" className="min-w-[40px]">
                       <DropdownMenuItem onSelect={() => onViewMember(member)} className="px-2 py-1">
                         <Eye className="mr-2 h-4 w-4" />
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => onEditMember(member)} className="px-2 py-1">
-                        <Pencil className="mr-2 h-4 w-4" />
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => onRemoveMember(member)} className="text-red-600 focus:text-red-500 px-2 py-1">
-                        <Trash2 className="mr-2 h-4 w-4" />
+                        View
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

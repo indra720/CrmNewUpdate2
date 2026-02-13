@@ -2550,7 +2550,6 @@ export async function fetchProjectBacklogTasks(
 
   try {
     const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/projects/projects/${projectId}/backlog/`;
-    console.log("Fetching project backlog tasks from:", url);
 
     const response = await fetch(url, {
       method: "GET",
@@ -2905,11 +2904,11 @@ export async function fetchTeamWorkload(): Promise<TeamWorkload[]> {
     throw new Error(errorData.message || "Failed to fetch team workload");
   }
 
-  const data = await response.json();
+  const data: TeamWorkload[] = await response.json();
 
   // ⭐ VERY IMPORTANT — REMOVE DUPLICATES (API me duplicates aa rahe hain)
-  const uniqueUsers = Array.from(
-    new Map(data.map((item: TeamWorkload) => [item.user_id, item])).values()
+  const uniqueUsers: TeamWorkload[] = Array.from(
+    new Map<number, TeamWorkload>(data.map((item) => [item.user_id, item])).values()
   );
 
   return uniqueUsers;

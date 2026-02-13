@@ -228,20 +228,37 @@ const BoardColumn = ({ id, title, tasks }: { id: string, title: string, tasks: S
   );
 };
 
-const ALL_STATUSES: SprintTask['status'][] = ['Todo', 'In Progress', 'Review', 'Done'];
+const ALL_STATUSES: SprintTask['status'][] = ['Todo', 'In Progress', 'Review', 'Done', 'Blocked'];
 
 // Helper to map API Task to SprintTask
 const mapTaskToSprintTask = (apiTask: Task): SprintTask => {
   // Map API status to SprintTask status
   let sprintTaskStatus: SprintTask['status'];
   switch (apiTask.status) {
-    case 'todo': sprintTaskStatus = 'Todo'; break;
-    case 'in_progress': sprintTaskStatus = 'In Progress'; break;
-    case 'review': sprintTaskStatus = 'Review'; break;
-    case 'done': sprintTaskStatus = 'Done'; break;
-    case 'blocked': sprintTaskStatus = 'Blocked'; break;
-    default: sprintTaskStatus = 'Todo'; // Default or handle unknown status
+    case 'todo':
+      sprintTaskStatus = 'Todo';
+      break;
+
+    case 'in_progress':
+      sprintTaskStatus = 'In Progress';
+      break;
+
+    case 'review':
+      sprintTaskStatus = 'Review';
+      break;
+
+    case 'done':
+      sprintTaskStatus = 'Done';
+      break;
+
+    case 'blocked': // ⭐ IMPORTANT
+      sprintTaskStatus = 'Blocked'; // Set to 'Blocked' instead of 'Todo'
+      break;
+
+    default:
+      sprintTaskStatus = 'Todo';
   }
+
 
   // Map API priority to SprintTask priority
   let sprintTaskPriority: SprintTask['priority'];
@@ -254,7 +271,10 @@ const mapTaskToSprintTask = (apiTask: Task): SprintTask => {
   }
 
   // Convert estimated_hours to storyPoints (e.g., 1 SP = 4 hours, or a default)
-  const storyPoints = apiTask.estimated_hours ? Math.round(apiTask.estimated_hours / 4) : 0; // Assuming 1 SP = 4 hours, default to 0
+  const storyPoints = apiTask.estimated_hours
+    ? Math.max(1, Math.round(apiTask.estimated_hours / 4))
+    : 1;
+  // Assuming 1 SP = 4 hours, default to 0
 
   // Map assigned_to (number) to assigneeId (string)
   const assigneeId = apiTask.assigned_to ? String(apiTask.assigned_to) : undefined;
@@ -401,25 +421,53 @@ export function Sprints({ isHistoryView = false }: { isHistoryView?: boolean }) 
 
         try {
 
-          const fetchedApiTasks = await fetchProjectBacklogTasks(activeSprint.project);
+                    const fetchedApiTasks = await fetchProjectBacklogTasks(activeSprint.project);
 
-          const mappedAllProjectTasks = fetchedApiTasks.map(mapTaskToSprintTask);
-          // Filter tasks for the active sprint (Sprint Items)
-          const sprintItems = mappedAllProjectTasks.filter(task => task.sprintId === activeSprint.id);
-          setTasks(sprintItems); // Populate 'tasks' state for Sprint Items
-          // Filter tasks not assigned to any sprint or not to the active sprint (Project Backlog)
+                    console.log("Fetched API Tasks:", fetchedApiTasks); // Log fetched raw API tasks
 
-          // This assumes `apiTask.sprint` is null for unassigned tasks, or we filter explicitly by `activeSprint.id`.
+          
 
-          const projectBacklogItems = mappedAllProjectTasks.filter(task => task.sprintId !== activeSprint.id);
+                    const mappedAllProjectTasks = fetchedApiTasks.map(mapTaskToSprintTask);
 
-          setProjectBacklog(projectBacklogItems); // Populate 'projectBacklog' state for Project Backlog
+                    console.log("Mapped All Project Tasks:", mappedAllProjectTasks); // Log tasks after mapping
+
+          
+
+                    // Apply new filter: exclude tasks with status 'Done'
+
+                    const filteredMappedTasks = mappedAllProjectTasks.filter(task => task.status !== 'Done');
+
+                    console.log("Filtered Mapped Tasks (excluding Done):", filteredMappedTasks); // Log tasks after excluding 'Done'
+
+                    
+
+                    // Filter tasks for the active sprint (Sprint Items)
+
+                    const sprintItems = filteredMappedTasks.filter(task => task.sprintId === activeSprint.id);
+
+                    setTasks(sprintItems); // Populate 'tasks' state for Sprint Items
+
+                    console.log("Sprint Items (tasks for active sprint):", sprintItems); // Log sprint items
+
+                    // Filter tasks not assigned to the active sprint (Project Backlog)
+
+                    const projectBacklogItems = filteredMappedTasks.filter(
+
+                      task => task.sprintId !== activeSprint.id
+
+                    );
+
+          
+
+                    setProjectBacklog(projectBacklogItems); // Populate 'projectBacklog' state for Project Backlog
+
+                    console.log("Project Backlog Items (not in active sprint):", projectBacklogItems); // Log project backlog items
 
 
 
         } catch (err: any) {
 
-          console.error("Failed to fetch project backlog tasks:", err);
+
 
           // Handle error state for project backlog if needed
 
@@ -440,6 +488,12 @@ export function Sprints({ isHistoryView = false }: { isHistoryView?: boolean }) 
     }
 
   }, [activeSprint]); // Dependency array includes activeSprint
+
+
+
+  useEffect(() => {
+    console.log("ACTIVE SPRINT FULL:", activeSprint);
+  }, [activeSprint]);
 
 
 
@@ -750,7 +804,7 @@ export function Sprints({ isHistoryView = false }: { isHistoryView?: boolean }) 
                           }}
                         >
                           <div className="flex justify-between items-start mb-2">
-                            <Badge variant="outline" className="text-[9px] h-4">{task.priority}</Badge>
+                            <Badge variant="outline" className="text-[9px] h-4">{task.status}</Badge>
                             <Plus className="w-3 h-3 text-slate-400 group-hover:text-primary" />
                           </div>
                           <h4 className="text-xs font-medium leading-tight">{task.title}</h4>

@@ -8,7 +8,7 @@ export interface SprintTask {
   title: string;
   type: 'Bug' | 'Feature' | 'Improvement';
   priority: 'Low' | 'Medium' | 'High' | 'Urgent';
-  status: 'Todo' | 'In Progress' | 'Review' | 'Done';
+  status: 'Todo' | 'In Progress' | 'Review' | 'Done' | 'Blocked';
   assigneeId?: string;
   storyPoints: number;
   blocked?: boolean;
@@ -26,6 +26,7 @@ export interface SprintHistoryEntry {
 }
 
 export interface Sprint {
+  project_id: string;
   number: ReactNode;
   id: string;
   project: string; // From API: Project ID (UUID)

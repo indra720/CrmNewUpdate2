@@ -2,9 +2,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, Search, Users, LayoutGrid, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { TeamMember } from '@/lib/mock-team-members';
 
-import { mockTeamMembers, TeamMember } from '@/lib/mock-team-members';
-import { mockProjects, mockProjectMembers, mockTasks } from '@/lib/mockData'; // Added mockProjects, mockProjectMembers, mockTasks
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,8 +13,6 @@ import {AnimatedCounter} from '@/components/dashboard/animated-counter'; // Assu
 // Import the new components
 import TeamMemberList from './TeamMemberList';
 import MemberProfileDialog from './MemberProfileDialog';
-import { EditTeamMemberDialog } from './EditTeamMemberDialog';
-import RemoveConfirmationDialog from './RemoveConfirmationDialog';
 import { useSearch } from '@/context/SearchContext';
 
 
@@ -46,188 +43,172 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, description }) 
 
 
 const TeamView = () => {
-  const [allTeamMembers, setAllTeamMembers] = useState<TeamMember[]>([]); // Renamed to avoid conflict, initialized as empty
-  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const { searchQuery } = useSearch();
-  const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
-  const [dialogs, setDialogs] = useState({ profile: false, edit: false, remove: false });
-
-  // Fetch role and ID, then filter members
-  useEffect(() => {
-    const role = localStorage.getItem('userRole');
-    const userId = localStorage.getItem('userId');
-    setCurrentUserRole(role);
-    setCurrentUserId(userId);
-
-    let membersToSet: TeamMember[] = [];
-
-    if (role === 'admin' || role === 'superadmin') {
-      membersToSet = mockTeamMembers;
-    } else if (role === 'team-leader' && userId) {
-      // Find projects the team leader is part of
-      const teamLeaderProjectIds = mockProjectMembers
-        .filter(member => member.id === userId)
-        .map(member => member.projectId);
-
-      // Find all unique member IDs associated with these projects
-      const uniqueRelevantMemberIds = new Set<string>();
-      mockProjectMembers.forEach(member => {
-        if (teamLeaderProjectIds.includes(member.projectId)) {
-          uniqueRelevantMemberIds.add(member.id);
+    const [teamStats, setTeamStats] = useState({
+      total_members: 0,
+      active_projects: 0,
+      tasks_in_progress: 0,
+      completed_last_7_days: 0,
+    });
+    const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+  
+    // Fetch data from API
+    useEffect(() => {
+      const fetchTeamOverview = async () => {
+        const token = localStorage.getItem('authToken')
+        try {
+          const response = await fetch('http://18.138.124.3/api/projects/team/overview/',{
+            method:'GET',
+            headers:{
+              'Content-Type': 'application/json',
+              'Authorization': `Token ${token}`, 
+            }
+          });
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+          setTeamStats(data.stats);
+          setTeamMembers(data.members.map((member: any) => ({
+              id: member.id.toString(),
+              name: member.name,
+              role: member.role as TeamMember['role'],
+              email: member.email,
+              projects: member.projects || [],
+              tasks: [], 
+              tasksAssigned: member.task_count || 0,
+              lastActivity: new Date(), // Placeholder, API doesn't provide this directly
+          })));
+        } catch (e: any) {
+          setError(e.message);
+        } finally {
+          setLoading(false);
         }
-      });
-      // Filter mockTeamMembers to include only relevant members
-      membersToSet = mockTeamMembers.filter(member => uniqueRelevantMemberIds.has(member.id));
-    }
-    // For other roles or if not logged in, membersToSet remains empty
-
-    setAllTeamMembers(membersToSet);
-  }, []); // Empty dependency array means this effect runs once on mount.
-
-
-  const filteredMembers = useMemo(() => {
-    // Filter the `allTeamMembers` state
-    return allTeamMembers.filter(member =>
-      member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.role.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [allTeamMembers, searchQuery]); // Dependency on allTeamMembers
-
-  // Derived metrics for the overview cards - now based on filteredMembers
-  const totalMembers = filteredMembers.length;
-  const activeProjects = useMemo(() => {
-    const projectSet = new Set<string>();
-    filteredMembers.forEach(member => member.projects.forEach(p => projectSet.add(p)));
-    return projectSet.size;
-  }, [filteredMembers]);
-  const totalTasksInProgress = useMemo(() => {
-    return filteredMembers.reduce((sum, member) => {
-      // Assuming mockTasks is available globally or passed down if needed for accurate task status
-      const inProgressCount = mockTasks.filter(t => 
-        t.assigneeId === member.id && t.status === 'in_progress'
-      ).length;
-      return sum + inProgressCount;
-    }, 0);
-  }, [filteredMembers]);
-  // Placeholder: In a real app, this would come from actual task data
-  const completedTasksLast7Days = Math.floor(Math.random() * 50) + 10; 
-
-  const handleAddMember = (newMemberData: Omit<TeamMember, 'id' | 'projects' | 'tasks' | 'lastActivity' | 'tasksAssigned'>) => {
-    const newMember: TeamMember = {
-      id: `MEMBER-${Date.now()}`, // Unique ID
-      ...newMemberData,
-      projects: [], // Initially no projects
-      tasks: [], // Initially no tasks
-      tasksAssigned: 0, // Initially no tasks
-      lastActivity: new Date(),
+      };
+  
+      fetchTeamOverview();
+    }, []);
+  
+    const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const { searchQuery } = useSearch();
+    const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
+    const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+    const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
+  
+    useEffect(() => {
+      const role = localStorage.getItem('userRole');
+      const userId = localStorage.getItem('userId');
+      setCurrentUserRole(role);
+      setCurrentUserId(userId);
+    }, []); 
+  
+  
+    const filteredMembers = useMemo(() => {
+      return teamMembers.filter(member =>
+        member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        member.role.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }, [teamMembers, searchQuery]);
+  
+  
+    const handleAddMember = (newMemberData: Omit<TeamMember, 'id' | 'projects' | 'tasks' | 'lastActivity' | 'tasksAssigned'>) => {
+      const newMember: TeamMember = {
+        id: `MEMBER-${Date.now()}`, // Unique ID
+        ...newMemberData,
+        projects: [], // Initially no projects
+        tasks: [], // Initially no tasks
+        tasksAssigned: 0, // Initially no tasks
+        lastActivity: new Date(),
+      };
+      setTeamMembers(prev => [...prev, newMember]); // Update teamMembers
     };
-    setAllTeamMembers(prev => [...prev, newMember]); // Update allTeamMembers
-  };
-
-  const openDialog = (type: 'profile' | 'edit' | 'remove', member: TeamMember) => {
-    setSelectedMember(member);
-    setDialogs(d => ({ ...d, [type]: true }));
-  };
-
-  const closeDialog = (type: 'profile' | 'edit' | 'remove') => {
-    setDialogs(d => ({ ...d, [type]: false }));
-    setTimeout(() => setSelectedMember(null), 300); // Clear selected member after dialog closes
-  };
-
-  const handleUpdateMember = (updatedMember: TeamMember) => {
-    setAllTeamMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m)); // Update allTeamMembers
-    closeDialog('edit');
-  };
-
-  const handleConfirmRemove = () => {
-    if (selectedMember) {
-      setAllTeamMembers(prev => prev.filter(m => m.id !== selectedMember.id)); // Update allTeamMembers
+  
+    const handleViewMember = (memberId: string) => {
+      setSelectedMemberId(memberId);
+      setIsProfileDialogOpen(true);
+    };
+  
+    const handleCloseProfileDialog = () => {
+      setIsProfileDialogOpen(false);
+      setTimeout(() => setSelectedMemberId(null), 300); // Clear selected member ID after dialog closes
+    };
+  
+    if (loading) {
+      return <div className="p-4 sm:p-6 text-center">Loading team data...</div>;
     }
-    closeDialog('remove');
-  };
-
-
-  return (
-    <div className="p-4 sm:p-6 space-y-6 bg-card rounded-lg shadow-sm">
-      {/* Header and Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Team Management</h1>
-          <p className="text-muted-foreground">Manage your project team members.</p>
+  
+    if (error) {
+      return <div className="p-4 sm:p-6 text-center text-red-500">Error: {error}</div>;
+    }
+  
+  
+    return (
+      <div className="p-4 sm:p-6 space-y-6 bg-card rounded-lg shadow-sm">
+        {/* Header and Actions */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Team Management</h1>
+            <p className="text-muted-foreground">Manage your project team members.</p>
+          </div>
+          {/* Only Admin and Superadmin can add members */}
+          {(currentUserRole === 'admin' || currentUserRole === 'superadmin') && (
+              <Button size="sm" className="gap-2" onClick={() => setIsAddMemberDialogOpen(true)}>
+              <Plus className="w-4 h-4" />
+              Add Member
+              </Button>
+          )}
         </div>
-        {/* Only Admin and Superadmin can add members */}
-        {(currentUserRole === 'admin' || currentUserRole === 'superadmin') && (
-            <Button size="sm" className="gap-2" onClick={() => setIsAddMemberDialogOpen(true)}>
-            <Plus className="w-4 h-4" />
-            Add Member
-            </Button>
-        )}
+  
+        {/* Team Overview Metrics */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <StatCard 
+            title="Total Members" 
+            value={teamStats.total_members} 
+            icon={<Users className="h-4 w-4 text-muted-foreground" />} 
+            description="Members currently in your team."
+          />
+          <StatCard 
+            title="Active Projects" 
+            value={teamStats.active_projects} 
+            icon={<LayoutGrid className="h-4 w-4 text-muted-foreground" />} 
+            description="Projects with active team involvement."
+          />
+          <StatCard 
+            title="Tasks in Progress" 
+            value={teamStats.tasks_in_progress} 
+            icon={<CheckCircle className="h-4 w-4 text-muted-foreground" />} 
+            description="Total active tasks across the team."
+          />
+          <StatCard 
+            title="Completed (7 Days)" 
+            value={teamStats.completed_last_7_days} 
+            icon={<CheckCircle className="h-4 w-4 text-muted-foreground" />} 
+            description="Tasks completed in the last week."
+          />
+        </div>
+  
+        {/* Team Members List */}
+        <TeamMemberList
+          teamMembers={filteredMembers}
+          onViewMember={(member) => handleViewMember(member.id)}
+        />
+  
+        {/* Dialogs */}
+        <AddTeamMemberDialog
+          isOpen={isAddMemberDialogOpen}
+          onOpenChange={setIsAddMemberDialogOpen}
+          onAddMember={handleAddMember}
+        />
+        <MemberProfileDialog
+          isOpen={isProfileDialogOpen}
+          onOpenChange={handleCloseProfileDialog}
+          memberId={selectedMemberId}
+        />
       </div>
-
-      {/* Team Overview Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard 
-          title="Total Members" 
-          value={totalMembers} 
-          icon={<Users className="h-4 w-4 text-muted-foreground" />} 
-          description="Members currently in your team."
-        />
-        <StatCard 
-          title="Active Projects" 
-          value={activeProjects} 
-          icon={<LayoutGrid className="h-4 w-4 text-muted-foreground" />} 
-          description="Projects with active team involvement."
-        />
-        <StatCard 
-          title="Tasks in Progress" 
-          value={totalTasksInProgress} 
-          icon={<CheckCircle className="h-4 w-4 text-muted-foreground" />} 
-          description="Total active tasks across the team."
-        />
-        <StatCard 
-          title="Completed (7 Days)" 
-          value={completedTasksLast7Days} 
-          icon={<CheckCircle className="h-4 w-4 text-muted-foreground" />} 
-          description="Tasks completed in the last week."
-        />
-      </div>
-
-      {/* Team Members List */}
-      <TeamMemberList
-        teamMembers={filteredMembers}
-        onViewMember={(member) => openDialog('profile', member)}
-        onEditMember={(member) => openDialog('edit', member)}
-        onRemoveMember={(member) => openDialog('remove', member)}
-      />
-
-      {/* Dialogs */}
-      <AddTeamMemberDialog
-        isOpen={isAddMemberDialogOpen}
-        onOpenChange={setIsAddMemberDialogOpen}
-        onAddMember={handleAddMember}
-      />
-      <MemberProfileDialog
-        isOpen={dialogs.profile}
-        onOpenChange={() => closeDialog('profile')}
-        member={selectedMember}
-      />
-      <EditTeamMemberDialog
-        isOpen={dialogs.edit}
-        onOpenChange={() => closeDialog('edit')}
-        member={selectedMember}
-        onUpdateMember={handleUpdateMember}
-      />
-      <RemoveConfirmationDialog
-        isOpen={dialogs.remove}
-        onOpenChange={() => closeDialog('remove')}
-        member={selectedMember}
-        onConfirm={handleConfirmRemove}
-      />
-    </div>
-  );
-};
+    );
+  };
 
 export default TeamView;
