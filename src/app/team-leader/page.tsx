@@ -223,19 +223,29 @@ const TeamLeaderDashboardContent = () => {
   const fetchData = async (start?: string, end?: string) => {
     setLoading(true);
     setError(null);
-    setUsers([]);
-    setDashboardData(null);
-    try {
-      let url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/api/team-leader/staff-dashboard/`;
-      const params = new URLSearchParams();
-      if (start) params.append("start_date", start);
-      if (end) params.append("end_date", end);
-      if (params.toString()) {
-        url += `?${params.toString()}`;
-      }
-
-      const response = await fetch(url, { credentials: "include" });
-      if (!response.ok) {
+          setUsers([]);
+        setDashboardData(null);
+        try {
+          const token = localStorage.getItem('authToken'); // Get token from localStorage
+          if (!token) {
+            throw new Error("Authentication token not found. Please log in again.");
+          }
+    
+          let url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/api/team-leader/staff-dashboard/`;
+          const params = new URLSearchParams();
+          if (start) params.append("start_date", start);
+          if (end) params.append("end_date", end);
+          if (params.toString()) {
+            url += `?${params.toString()}`;
+          }
+    
+          const response = await fetch(url, {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Token ${token}`, // Include Authorization header
+            },
+            credentials: "include"
+          });      if (!response.ok) {
         throw new Error("Failed to fetch data");
       }
       const data = await response.json();
@@ -353,6 +363,9 @@ const TeamLeaderDashboardContent = () => {
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/api/team-leader/add-staff/`,
         {
           method: "POST",
+          headers: {
+            'Authorization': `Token ${localStorage.getItem('authToken')}`, // Include Authorization header
+          },
           credentials: "include",
           body: data,
         }
@@ -397,6 +410,9 @@ const TeamLeaderDashboardContent = () => {
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/accounts/api/team-leader/staff/edit/${editingUser.id}/`, {
         method: 'PATCH',
+        headers: {
+          'Authorization': `Token ${localStorage.getItem('authToken')}`, // Include Authorization header
+        },
         credentials: 'include',
         body: data,
       });
