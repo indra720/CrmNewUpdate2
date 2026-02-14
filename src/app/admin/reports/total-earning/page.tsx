@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { fetchTeamLeaderAllLeadsByTag } from '@/lib/api';
 import { BackButton } from '@/components/ui/back-button';
+import { useSearch } from '@/context/SearchContext';
 
 type Lead = any;
 

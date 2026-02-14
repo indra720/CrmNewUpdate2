@@ -313,7 +313,7 @@ const LostLeadsContent = () => {
   const table = useReactTable({
     data: leads,
     columns,
-    getCoreRowModel: getCoreRowodel(),
+    getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
