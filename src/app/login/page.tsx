@@ -532,7 +532,7 @@ const LoginContent = () => {
                   <form id="login-form" onSubmit={handleLoginSubmit}>
                     <div className="space-y-5">
                       <div className="space-y-2">
-                        <Label htmlFor="username">Username</Label>
+                        <Label htmlFor="username">Email</Label>
                         <Input
                           type="email"
                           id="username"
